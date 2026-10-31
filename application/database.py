@@ -34,12 +34,15 @@ def get_db_connection(database_url: str = None):
         logger.error("Database connection failed\nFile \"database.py\", line 25\nConnectionError: Database unavailable")
         raise ConnectionError("Database unavailable: Failed to connect to PostgreSQL cluster at target URI.")
 
+    if os.getenv("MOCK_DB", "false").lower() == "true" or target_url == "mock":
+        return None
+
     if psycopg2 is None:
         logger.warning("psycopg2 is not installed. Running in mock PostgreSQL database mode.")
         return None
 
     try:
-        conn = psycopg2.connect(target_url, connect_timeout=3)
+        conn = psycopg2.connect(target_url, connect_timeout=1)
         logger.info("Successfully connected to PostgreSQL database.")
         return conn
     except (OperationalError, Exception) as exc:

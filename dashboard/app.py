@@ -53,7 +53,7 @@ def system_status():
         "details": {}
     }
     try:
-        res = requests.get(APP_HEALTH_URL, timeout=2)
+        res = requests.get(APP_HEALTH_URL, timeout=0.5)
         status_data["http_code"] = res.status_code
         if res.status_code == 200:
             status_data["status"] = "UP"
@@ -126,6 +126,18 @@ def get_deployments():
     return {"deployments": deployments}
 
 
+@app.post("/api/simulate-error")
+@app.get("/api/simulate-error")
+def simulate_error(error_type: str = "db"):
+    """Trigger or proxy an error simulation to test monitoring, Groq AI triage, and Slack."""
+    target_url = "http://localhost:5000/api/simulate-db-error" if error_type == "db" else "http://localhost:5000/api/simulate-crash"
+    try:
+        res = requests.post(target_url, timeout=0.5)
+        return {"status": "forwarded", "code": res.status_code, "target": target_url}
+    except Exception as exc:
+        return {"status": "app_unreachable_mock_logged", "error": str(exc), "target": target_url}
+
+
 # Mount and serve the React Single-Page Application (SPA)
 FRONTEND_DIST = os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend", "dist")
 STATIC_INDEX = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates", "index.html")
@@ -133,8 +145,15 @@ STATIC_INDEX = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templat
 if os.path.exists(FRONTEND_DIST):
     app.mount("/assets", StaticFiles(directory=os.path.join(FRONTEND_DIST, "assets")), name="assets")
 
+    @app.get("/", response_class=FileResponse)
+    def serve_root():
+        return FileResponse(os.path.join(FRONTEND_DIST, "index.html"))
+
     @app.get("/{full_path:path}", response_class=FileResponse)
     def serve_react_app(full_path: str):
+        file_path = os.path.join(FRONTEND_DIST, full_path)
+        if os.path.isfile(file_path):
+            return FileResponse(file_path)
         return FileResponse(os.path.join(FRONTEND_DIST, "index.html"))
 else:
     @app.get("/", response_class=HTMLResponse)

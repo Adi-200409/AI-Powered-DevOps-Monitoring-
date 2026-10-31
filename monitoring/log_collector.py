@@ -6,6 +6,7 @@ Provides streaming/tailing capabilities to feed the error detector in real-time.
 """
 
 import os
+import re
 import time
 import subprocess
 from typing import Generator, List, Optional
@@ -13,6 +14,8 @@ from typing import Generator, List, Optional
 
 class LogCollector:
     """Collects logs from local files or running Docker containers."""
+
+    TIMESTAMP_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}")
 
     def __init__(self, log_file_path: Optional[str] = None, container_name: Optional[str] = None):
         if log_file_path:
@@ -40,12 +43,10 @@ class LogCollector:
     def tail_log_stream(self, interval_seconds: float = 1.0) -> Generator[str, None, None]:
         """Continuously tail and yield newly appended log lines from the file."""
         if not os.path.exists(self.log_file_path):
-            # Create if missing
             os.makedirs(os.path.dirname(self.log_file_path), exist_ok=True)
             open(self.log_file_path, "a", encoding="utf-8").close()
 
         with open(self.log_file_path, "r", encoding="utf-8", errors="ignore") as f:
-            # Start from the current end of file
             f.seek(0, os.SEEK_END)
             self._last_position = f.tell()
 
@@ -54,6 +55,40 @@ class LogCollector:
                 if line:
                     yield line.rstrip("\r\n")
                 else:
+                    time.sleep(interval_seconds)
+
+    def tail_log_events(self, interval_seconds: float = 0.5) -> Generator[List[str], None, None]:
+        """Continuously tail log file and yield multi-line log events.
+        
+        Groups a timestamped log line with any immediate stack trace continuation lines.
+        """
+        if not os.path.exists(self.log_file_path):
+            os.makedirs(os.path.dirname(self.log_file_path), exist_ok=True)
+            open(self.log_file_path, "a", encoding="utf-8").close()
+
+        with open(self.log_file_path, "r", encoding="utf-8", errors="ignore") as f:
+            f.seek(0, os.SEEK_END)
+            current_event: List[str] = []
+
+            while True:
+                line = f.readline()
+                if line:
+                    stripped = line.rstrip("\r\n")
+                    if self.TIMESTAMP_PATTERN.match(stripped):
+                        # Yield previous accumulated event if non-empty
+                        if current_event:
+                            yield current_event
+                        current_event = [stripped]
+                    else:
+                        # Continuation line (stack trace or multiline body)
+                        if current_event:
+                            current_event.append(stripped)
+                        else:
+                            current_event = [stripped]
+                else:
+                    if current_event:
+                        yield current_event
+                        current_event = []
                     time.sleep(interval_seconds)
 
     def fetch_docker_logs(self, tail: int = 100) -> List[str]:
