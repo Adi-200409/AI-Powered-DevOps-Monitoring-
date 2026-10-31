@@ -2,23 +2,30 @@ version: '3.8'
 
 services:
   # -------------------------------------------------------------
-  # 1. MongoDB Database
+  # 1. PostgreSQL Database
   # -------------------------------------------------------------
-  mongodb:
-    image: mongo:7.0
-    container_name: devops-mongodb
+  postgres:
+    image: postgres:16-alpine
+    container_name: devops-postgres
     restart: unless-stopped
     ports:
-      - "27017:27017"
+      - "5432:5432"
     environment:
-      MONGO_INITDB_DATABASE: devops_db
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-devops_db}
     volumes:
-      - mongo-data:/data/db
+      - postgres-data:/var/lib/postgresql/data
     networks:
       - devops-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # -------------------------------------------------------------
-  # 2. Monitored Sample Application (Flask)
+  # 2. Monitored Sample Application (FastAPI + Python)
   # -------------------------------------------------------------
   application:
     build:
@@ -30,12 +37,13 @@ services:
       - "5000:5000"
     environment:
       - APP_PORT=5000
-      - MONGO_URI=mongodb://mongodb:27017/devops_db
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-devops_db}
       - LOG_FILE_PATH=/app/logs/application.log
     volumes:
       - shared-logs:/app/logs
     depends_on:
-      - mongodb
+      postgres:
+        condition: service_healthy
     networks:
       - devops-network
 
@@ -64,7 +72,7 @@ services:
       - devops-network
 
   # -------------------------------------------------------------
-  # 4. Centralized Web Monitoring Dashboard
+  # 4. Centralized Web Monitoring Dashboard (FastAPI + React)
   # -------------------------------------------------------------
   dashboard:
     build:
@@ -72,7 +80,7 @@ services:
       dockerfile: Dockerfile
     container_name: devops-dashboard
     restart: unless-stopped
-    command: ["python", "-m", "dashboard.app"]
+    command: ["uvicorn", "dashboard.app:app", "--host", "0.0.0.0", "--port", "5050"]
     ports:
       - "5050:5050"
     env_file:
@@ -80,6 +88,7 @@ services:
     environment:
       - DASHBOARD_PORT=5050
       - LOG_FILE_PATH=/workspace/logs/application.log
+      - APP_HEALTH_URL=http://application:5000/health
     volumes:
       - shared-logs:/workspace/logs
       - .:/workspace
@@ -89,10 +98,9 @@ services:
       - devops-network
 
 volumes:
-  mongo-data:
+  postgres-data:
   shared-logs:
 
 networks:
   devops-network:
     driver: bridge
-

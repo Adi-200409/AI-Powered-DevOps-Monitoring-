@@ -8,9 +8,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /workspace
 
-# Install curl for health check
+# Install curl and PostgreSQL development libraries
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    libpq-dev \
+    gcc \
     && rm -rf /var/lib/apt/lists/*
 
 # Install all project dependencies
@@ -26,6 +28,5 @@ COPY logs/ logs/
 
 EXPOSE 5000 5050
 
-# Default entrypoint launches the application
-CMD ["python", "-m", "application.app"]
-
+# Default entrypoint launches the FastAPI application
+CMD ["uvicorn", "application.app:app", "--host", "0.0.0.0", "--port", "5000"]

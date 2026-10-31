@@ -130,9 +130,9 @@ if __name__ == "__main__":
     dummy_incident = {"container": "user-service", "message": "Database connection failed."}
     dummy_ai = {
         "detected_error": "Database connection failed.",
-        "probable_root_cause": "Possible MongoDB connection configuration issue.",
+        "probable_root_cause": "Possible PostgreSQL database connection configuration issue.",
         "potential_code_location": "database.py",
-        "ai_recommendation": "Verify the database URI and Docker network."
+        "ai_recommendation": "Verify the DATABASE_URL and PostgreSQL Docker network."
     }
     notifier.send_alert(dummy_incident, dummy_ai)
 

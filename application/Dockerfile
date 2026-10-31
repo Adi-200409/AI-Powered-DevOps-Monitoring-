@@ -1,18 +1,19 @@
 # ==========================================
-# Dockerfile for Sample Application
+# Dockerfile for FastAPI Sample Application
 # ==========================================
 FROM python:3.12-slim
 
-# Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     APP_PORT=5000
 
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies (curl for health check, libpq for PostgreSQL)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    libpq-dev \
+    gcc \
     && rm -rf /var/lib/apt/lists/*
 
 # Install python dependencies
@@ -32,6 +33,5 @@ EXPOSE 5000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:5000/health || exit 1
 
-# Run application
-CMD ["python", "-m", "application.app"]
-
+# Run FastAPI via Uvicorn
+CMD ["uvicorn", "application.app:app", "--host", "0.0.0.0", "--port", "5000"]

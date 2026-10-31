@@ -1,15 +1,17 @@
-"""Sample Flask Application (Online Shopping / User Management Service).
+"""Sample FastAPI Application (User Management & Shopping Service).
 
 Monitored by the AI-Powered DevOps Monitoring System.
-Outputs logs to application.log for error detection and AI triage.
+Tech Stack: FastAPI, Python, PostgreSQL.
+Outputs structured logs to application.log for error detection and AI triage.
 """
 
 import os
 import sys
 import logging
 from datetime import datetime, timezone
-from flask import Flask, jsonify, request
-from application.database import get_db_client, get_application_data
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from application.database import get_db_connection, get_application_data
 
 # Ensure logs directory exists
 LOG_DIR = os.getenv("LOG_DIR", os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "logs"))
@@ -28,61 +30,85 @@ logging.basicConfig(
 )
 logger = logging.getLogger("application")
 
-app = Flask(__name__)
+app = FastAPI(
+    title="User Management Service",
+    description="FastAPI microservice monitored by AI DevOps system",
+    version="1.0.0"
+)
+
+# Enable CORS for React frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
-@app.route("/", methods=["GET"])
+@app.get("/")
 def index():
     """Application root endpoint."""
-    return jsonify({
+    return {
         "status": "online",
         "service": "User Management & Shopping API",
+        "framework": "FastAPI",
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "version": "1.0.0"
-    }), 200
+    }
 
 
-@app.route("/health", methods=["GET"])
+@app.get("/health")
 def health():
     """Health check endpoint used by Jenkins CI/CD stage 7 and monitoring dashboard."""
-    # Simple liveness check
-    return jsonify({
+    return {
         "status": "healthy",
+        "service": "User Management Service",
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "uptime": "active"
-    }), 200
+        "uptime": "active",
+        "database": "postgresql"
+    }
 
 
-@app.route("/api/items", methods=["GET"])
+@app.get("/api/items")
 def get_items():
-    """Retrieve shopping items from MongoDB."""
+    """Retrieve shopping items from PostgreSQL database."""
     try:
         items = get_application_data()
-        return jsonify({"items": items, "count": len(items)}), 200
+        return {"items": items, "count": len(items)}
     except Exception as exc:
-        logger.error("Database connection failed\nFile \"database.py\", line 25\nConnectionError: Database unavailable")
-        return jsonify({
-            "error": "Internal Server Error",
-            "message": "Database unavailable. Could not fetch items."
-        }), 500
+        logger.error(
+            "Database connection failed\n"
+            "File \"database.py\", line 25\n"
+            "ConnectionError: Database unavailable"
+        )
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "Internal Server Error", "message": "PostgreSQL database unavailable."}
+        ) from exc
 
 
-@app.route("/api/simulate-db-error", methods=["GET", "POST"])
+@app.get("/api/simulate-db-error")
+@app.post("/api/simulate-db-error")
 def simulate_db_error():
-    """Simulation route: Generates a database connection failure log for pipeline testing."""
+    """Simulation route: Generates a PostgreSQL connection failure log for pipeline testing."""
     logger.error(
         "Database connection failed\n"
         "File \"database.py\", line 25\n"
         "ConnectionError: Database unavailable"
     )
-    return jsonify({
-        "status": "error_simulated",
-        "error_type": "ConnectionError",
-        "message": "Simulated database connection failure logged to application.log."
-    }), 500
+    raise HTTPException(
+        status_code=500,
+        detail={
+            "status": "error_simulated",
+            "error_type": "ConnectionError",
+            "message": "Simulated PostgreSQL connection failure logged to application.log."
+        }
+    )
 
 
-@app.route("/api/simulate-crash", methods=["GET", "POST"])
+@app.get("/api/simulate-crash")
+@app.post("/api/simulate-crash")
 def simulate_crash():
     """Simulation route: Triggers a CRITICAL unhandled error."""
     logger.critical(
@@ -90,15 +116,19 @@ def simulate_crash():
         "File \"application/app.py\", line 85, in process_transaction\n"
         "RuntimeError: Fatal service disruption encountered."
     )
-    return jsonify({
-        "status": "critical_simulated",
-        "error_type": "RuntimeError",
-        "message": "Simulated critical failure logged to application.log."
-    }), 500
+    raise HTTPException(
+        status_code=500,
+        detail={
+            "status": "critical_simulated",
+            "error_type": "RuntimeError",
+            "message": "Simulated critical failure logged to application.log."
+        }
+    )
 
 
 if __name__ == "__main__":
+    import uvicorn
     port = int(os.getenv("APP_PORT", 5000))
     host = os.getenv("APP_HOST", "0.0.0.0")
-    logger.info("Starting sample application on %s:%d", host, port)
-    app.run(host=host, port=port, debug=False)
+    logger.info("Starting FastAPI sample application on %s:%d", host, port)
+    uvicorn.run("application.app:app", host=host, port=port, reload=False)

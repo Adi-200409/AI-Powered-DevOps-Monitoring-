@@ -118,11 +118,11 @@ class GroqAnalyzer:
         if "database" in error_message.lower() or "connection" in error_message.lower():
             return {
                 "severity": "High",
-                "detected_error": "MongoDB connection timeout / Database unavailable",
-                "probable_root_cause": "The app cannot connect to the MongoDB server: a wrong connection string, an unavailable database service or network restrictions",
+                "detected_error": "PostgreSQL connection timeout / Database unavailable",
+                "probable_root_cause": "The FastAPI app cannot connect to the PostgreSQL server: an invalid connection string, unavailable database container, or network port 5432 restrictions",
                 "potential_code_location": f"{potential_location} (based on the supplied repository context, not an automatically verified diagnosis)",
-                "suggested_solution": "1. Verify the MongoDB connection URI. 2. Check that MongoDB container is running. 3. Verify the Docker network configuration. 4. Add connection timeout and retry handling",
-                "ai_recommendation": "Check the database connection configuration before restarting the application"
+                "suggested_solution": "1. Verify DATABASE_URL URI and credentials. 2. Verify that PostgreSQL container is running on port 5432. 3. Check Docker network bridge between app and postgres. 4. Implement connection pooling and retry timeout.",
+                "ai_recommendation": "Verify PostgreSQL service status and DATABASE_URL in .env before restarting the FastAPI application."
             }
         
         return {
@@ -140,7 +140,7 @@ if __name__ == "__main__":
     res = analyzer.analyze_incident(
         error_message="ConnectionError: Database unavailable",
         sanitized_trace="database.py:25",
-        code_snippet="client = MongoClient(uri)",
+        code_snippet="conn = psycopg2.connect(DATABASE_URL)",
         potential_location="database.py:25"
     )
     print("AI Analysis Output:\n", json.dumps(res, indent=2))

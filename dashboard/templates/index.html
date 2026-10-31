@@ -7,6 +7,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- React 18 and Babel Standalone for Instant Execution -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <style>
     :root {
       --bg: #0b0f19;
@@ -16,23 +20,17 @@
       --text: #f3f4f6;
       --text-muted: #9ca3af;
       --accent: #38bdf8;
-      --accent-glow: rgba(56, 189, 248, 0.15);
       --success: #10b981;
       --warning: #f59e0b;
       --danger: #ef4444;
       --purple: #a855f7;
     }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       background-color: var(--bg);
       color: var(--text);
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
       line-height: 1.5;
       padding: 1.5rem;
     }
@@ -46,14 +44,9 @@
       border-bottom: 1px solid var(--card-border);
     }
 
-    .brand-title {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
-
+    .brand-title { display: flex; align-items: center; gap: 0.75rem; }
     .brand-title h1 {
-      font-size: 1.4rem;
+      font-size: 1.35rem;
       font-weight: 700;
       letter-spacing: -0.02em;
       background: linear-gradient(to right, #38bdf8, #818cf8);
@@ -61,20 +54,24 @@
       -webkit-text-fill-color: transparent;
     }
 
-    .tag {
-      font-size: 0.75rem;
+    .react-pill {
+      font-size: 0.72rem;
+      background: rgba(97, 218, 251, 0.15);
+      color: #61dafb;
+      padding: 0.2rem 0.55rem;
+      border-radius: 9999px;
+      font-weight: 600;
+      border: 1px solid rgba(97, 218, 251, 0.3);
+    }
+
+    .tech-pill {
+      font-size: 0.72rem;
       background: rgba(56, 189, 248, 0.12);
       color: var(--accent);
-      padding: 0.2rem 0.5rem;
+      padding: 0.2rem 0.55rem;
       border-radius: 9999px;
       font-weight: 600;
       border: 1px solid rgba(56, 189, 248, 0.3);
-    }
-
-    .header-actions {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
     }
 
     .refresh-badge {
@@ -100,7 +97,6 @@
       100% { opacity: 0.4; }
     }
 
-    /* 9-Panel Grid Layout */
     .dashboard-grid {
       display: grid;
       grid-template-columns: repeat(12, 1fr);
@@ -114,7 +110,6 @@
       padding: 1.2rem;
       display: flex;
       flex-direction: column;
-      position: relative;
     }
 
     .panel-header {
@@ -125,38 +120,28 @@
     }
 
     .panel-title {
-      font-size: 0.9rem;
+      font-size: 0.88rem;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.05em;
       color: var(--text-muted);
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
     }
 
-    /* Highlighted Panel for Groq AI */
     .panel-ai-highlight {
       border: 1px solid #6366f1;
       box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
       background: linear-gradient(180deg, rgba(30, 27, 75, 0.4) 0%, var(--card-bg) 100%);
     }
 
-    .panel-ai-highlight .panel-title {
-      color: #a5b4fc;
-    }
+    .panel-ai-highlight .panel-title { color: #a5b4fc; }
 
-    /* Grid Span Configurations */
     .col-4 { grid-column: span 4; }
     .col-6 { grid-column: span 6; }
-    .col-8 { grid-column: span 8; }
-    .col-12 { grid-column: span 12; }
 
     @media (max-width: 1024px) {
-      .col-4, .col-6, .col-8 { grid-column: span 12; }
+      .col-4, .col-6 { grid-column: span 12; }
     }
 
-    /* Metrics & Progress Bars */
     .metric-value {
       font-size: 2.2rem;
       font-weight: 700;
@@ -192,7 +177,7 @@
       gap: 0.4rem;
       padding: 0.25rem 0.75rem;
       border-radius: 9999px;
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       font-weight: 600;
     }
 
@@ -208,7 +193,6 @@
       border: 1px solid rgba(239, 68, 68, 0.3);
     }
 
-    /* Console / Log Viewer */
     .terminal-window {
       background: #06090e;
       border: 1px solid #1e293b;
@@ -222,11 +206,6 @@
       white-space: pre-wrap;
     }
 
-    .log-line-error { color: #f87171; font-weight: 600; }
-    .log-line-critical { color: #fb7185; font-weight: 700; }
-    .log-line-info { color: #60a5fa; }
-
-    /* Code View */
     .code-box {
       background: #090d16;
       border: 1px solid #1e293b;
@@ -239,7 +218,6 @@
       overflow-y: auto;
     }
 
-    /* Pipeline Stages */
     .pipeline-stages {
       display: flex;
       align-items: center;
@@ -275,284 +253,260 @@
   </style>
 </head>
 <body>
+  <div id="root"></div>
 
-  <!-- Dashboard Header -->
-  <header>
-    <div class="brand-title">
-      <h1>AI-Powered DevOps Monitoring System</h1>
-      <span class="tag">Incident Resolution v1.0</span>
-    </div>
-    <div class="header-actions">
-      <div class="refresh-badge">
-        <span class="pulse-dot"></span>
-        <span>Live Polling Active (5s)</span>
-      </div>
-    </div>
-  </header>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
 
-  <!-- 9-Panel Grid Wireframe -->
-  <main class="dashboard-grid">
+    function App() {
+      const [systemStatus, setSystemStatus] = useState({ status: 'CHECKING', service: 'FastAPI Microservice' });
+      const [metrics, setMetrics] = useState({
+        cpu: { percent: 0, cores: 0 },
+        memory: { percent: 0, used_gb: 0, total_gb: 0, available_gb: 0 },
+        uptime: { formatted: '-' }
+      });
+      const [logs, setLogs] = useState({ lines: [], count: 0 });
+      const [incidents, setIncidents] = useState([]);
+      const [deployments, setDeployments] = useState([]);
 
-    <!-- Panel 1: System Overview -->
-    <div class="panel col-4">
-      <div class="panel-header">
-        <span class="panel-title">1. System Overview</span>
-        <span id="app-status-badge" class="status-pill down">CHECKING</span>
-      </div>
-      <div>
-        <div class="metric-value" id="app-health-val">ONLINE</div>
-        <div class="metric-sub" id="app-health-details">Monitoring Target: User Management Service (Flask)</div>
-        <div class="metric-sub" style="margin-top: 0.5rem;">Uptime: <strong id="app-uptime-val">-</strong></div>
-      </div>
-    </div>
+      const fetchData = async () => {
+        try {
+          const sRes = await fetch('/api/system-status');
+          if (sRes.ok) setSystemStatus(await sRes.json());
+        } catch (e) {
+          setSystemStatus({ status: 'DOWN', service: 'FastAPI Microservice' });
+        }
 
-    <!-- Panel 2: CPU Monitoring (metrics_collector.py) -->
-    <div class="panel col-4">
-      <div class="panel-header">
-        <span class="panel-title">2. CPU Monitoring</span>
-        <span class="metric-sub" id="cpu-cores">- Cores</span>
-      </div>
-      <div>
-        <div class="metric-value"><span id="cpu-percent">0</span>%</div>
-        <div class="progress-bar-container">
-          <div id="cpu-bar" class="progress-bar" style="width: 0%;"></div>
-        </div>
-        <div class="metric-sub">Host Server CPU Utilization</div>
-      </div>
-    </div>
+        try {
+          const mRes = await fetch('/api/metrics');
+          if (mRes.ok) setMetrics(await mRes.json());
+        } catch (e) {}
 
-    <!-- Panel 3: Memory Monitoring (metrics_collector.py) -->
-    <div class="panel col-4">
-      <div class="panel-header">
-        <span class="panel-title">3. Memory Monitoring</span>
-        <span class="metric-sub" id="ram-used-text">- GB used</span>
-      </div>
-      <div>
-        <div class="metric-value"><span id="ram-percent">0</span>%</div>
-        <div class="progress-bar-container">
-          <div id="ram-bar" class="progress-bar" style="width: 0%; background: #a855f7;"></div>
-        </div>
-        <div class="metric-sub" id="ram-total-text">RAM Allocation: -</div>
-      </div>
-    </div>
+        try {
+          const lRes = await fetch('/api/logs');
+          if (lRes.ok) setLogs(await lRes.json());
+        } catch (e) {}
 
-    <!-- Panel 4: Log Viewer (log_collector.py) -->
-    <div class="panel col-6">
-      <div class="panel-header">
-        <span class="panel-title">4. Application Log Records (application.log)</span>
-        <span class="metric-sub" id="log-count">0 lines</span>
-      </div>
-      <div class="terminal-window" id="log-viewer">Streaming logs...</div>
-    </div>
+        try {
+          const iRes = await fetch('/api/incidents');
+          if (iRes.ok) {
+            const data = await iRes.json();
+            setIncidents(data.incidents || []);
+          }
+        } catch (e) {}
 
-    <!-- Panel 5: Error Detection (error_detector.py) -->
-    <div class="panel col-6">
-      <div class="panel-header">
-        <span class="panel-title">5. Error Detection (ERROR & CRITICAL)</span>
-        <span id="incident-count-badge" class="tag">0 Alerts</span>
-      </div>
-      <div class="terminal-window" id="error-list">No critical anomalies detected in active cycle.</div>
-    </div>
+        try {
+          const dRes = await fetch('/api/deployments');
+          if (dRes.ok) {
+            const data = await dRes.json();
+            setDeployments(data.deployments || []);
+          }
+        } catch (e) {}
+      };
 
-    <!-- Panel 6: AI Analysis (groq_analyzer.py) - HIGHLIGHTED -->
-    <div class="panel col-6 panel-ai-highlight">
-      <div class="panel-header">
-        <span class="panel-title">6. AI Root Cause Analysis (Groq LLM)</span>
-        <span class="ai-badge">AI INSIGHT</span>
-      </div>
-      <div style="font-size: 0.85rem;">
-        <div style="margin-bottom: 0.5rem;">
-          <span style="color: var(--text-muted);">Detected Error:</span>
-          <strong id="ai-detected-error" style="color: #f87171;">None</strong>
-        </div>
-        <div style="margin-bottom: 0.5rem;">
-          <span style="color: var(--text-muted);">Probable Root Cause:</span>
-          <p id="ai-root-cause" style="color: #e2e8f0; margin-top: 0.2rem;">System operating within expected parameters.</p>
-        </div>
-        <div style="margin-bottom: 0.5rem;">
-          <span style="color: var(--text-muted);">Suggested Solution:</span>
-          <p id="ai-solution" style="color: #38bdf8; margin-top: 0.2rem;">-</p>
-        </div>
+      useEffect(() => {
+        fetchData();
+        const interval = setInterval(fetchData, 5000);
+        return () => clearInterval(interval);
+      }, []);
+
+      const latestIncident = incidents.length > 0 ? incidents[0] : null;
+
+      return (
         <div>
-          <span style="color: var(--text-muted);">Operational Recommendation:</span>
-          <p id="ai-recommendation" style="color: #34d399; margin-top: 0.2rem;">-</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Panel 7: Code Path (code_analyzer.py) -->
-    <div class="panel col-6">
-      <div class="panel-header">
-        <span class="panel-title">7. Code Context & Location</span>
-        <span class="tag" id="code-location-tag">Repository Context</span>
-      </div>
-      <div class="code-box" id="code-snippet-box">
-# Code snippet around identified stack trace will display here...
-      </div>
-    </div>
-
-    <!-- Panel 8: Slack Notifications (slack_alert.py) -->
-    <div class="panel col-6">
-      <div class="panel-header">
-        <span class="panel-title">8. Slack Notifications (#devops-alerts)</span>
-        <span id="slack-status-badge" class="status-pill down">READY</span>
-      </div>
-      <div class="terminal-window" id="slack-preview" style="height: 140px;">
-Waiting for actionable alert trigger...
-      </div>
-    </div>
-
-    <!-- Panel 9: Deployment History (Jenkins CI/CD) -->
-    <div class="panel col-6">
-      <div class="panel-header">
-        <span class="panel-title">9. Deployment History (Jenkins 7-Stage Pipeline)</span>
-        <span class="tag">CI/CD</span>
-      </div>
-      <div id="deployment-history-list">
-        <!-- Jenkins deployments rendered via JS -->
-      </div>
-    </div>
-
-  </main>
-
-  <script>
-    async function updateDashboard() {
-      // 1. System Health
-      try {
-        const res = await fetch('/api/system-status');
-        const data = await res.json();
-        const badge = document.getElementById('app-status-badge');
-        const healthVal = document.getElementById('app-health-val');
-        if (data.status === 'UP') {
-          badge.className = 'status-pill up';
-          badge.innerText = 'HEALTHY';
-          healthVal.innerText = 'ONLINE';
-          healthVal.style.color = '#10b981';
-        } else {
-          badge.className = 'status-pill down';
-          badge.innerText = 'SERVICE DOWN';
-          healthVal.innerText = 'OFFLINE';
-          healthVal.style.color = '#ef4444';
-        }
-      } catch (e) {
-        console.error("Health check error", e);
-      }
-
-      // 2. Metrics
-      try {
-        const res = await fetch('/api/metrics');
-        const m = await res.json();
-        document.getElementById('cpu-percent').innerText = m.cpu.percent;
-        document.getElementById('cpu-bar').style.width = m.cpu.percent + '%';
-        document.getElementById('cpu-cores').innerText = m.cpu.cores + ' Cores';
-
-        document.getElementById('ram-percent').innerText = m.memory.percent;
-        document.getElementById('ram-bar').style.width = m.memory.percent + '%';
-        document.getElementById('ram-used-text').innerText = m.memory.used_gb + ' GB used';
-        document.getElementById('ram-total-text').innerText = `Total: ${m.memory.total_gb} GB | Free: ${m.memory.available_gb} GB`;
-        document.getElementById('app-uptime-val').innerText = m.uptime.formatted;
-      } catch (e) {
-        console.error("Metrics fetch error", e);
-      }
-
-      // 3. Logs
-      try {
-        const res = await fetch('/api/logs');
-        const data = await res.json();
-        const viewer = document.getElementById('log-viewer');
-        document.getElementById('log-count').innerText = data.count + ' lines';
-        viewer.innerHTML = data.lines.map(line => {
-          if (line.includes('ERROR')) return `<span class="log-line-error">${escapeHtml(line)}</span>`;
-          if (line.includes('CRITICAL')) return `<span class="log-line-critical">${escapeHtml(line)}</span>`;
-          if (line.includes('INFO')) return `<span class="log-line-info">${escapeHtml(line)}</span>`;
-          return escapeHtml(line);
-        }).join('\n');
-        viewer.scrollTop = viewer.scrollHeight;
-      } catch (e) {
-        console.error("Logs fetch error", e);
-      }
-
-      // 4. Incidents & AI Analysis
-      try {
-        const res = await fetch('/api/incidents');
-        const data = await res.json();
-        const badge = document.getElementById('incident-count-badge');
-        badge.innerText = data.count + ' Incidents';
-
-        if (data.incidents && data.incidents.length > 0) {
-          const latest = data.incidents[0];
-          const errList = document.getElementById('error-list');
-          errList.innerHTML = data.incidents.map(inc => `
-            <div style="margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid #1f2937;">
-              <span style="color: #f87171; font-weight: 600;">[${inc.level}]</span>
-              <span style="color: #94a3b8; font-size: 0.75rem;">${inc.timestamp}</span><br>
-              <span style="color: #e2e8f0;">${escapeHtml(inc.error_message)}</span>
+          <header>
+            <div className="brand-title">
+              <h1>AI-Powered DevOps Monitoring Dashboard</h1>
+              <span className="react-pill">React 18</span>
+              <span className="tech-pill">FastAPI + PostgreSQL</span>
             </div>
-          `).join('');
-
-          // Panel 6: AI
-          if (latest.ai_diagnosis) {
-            document.getElementById('ai-detected-error').innerText = latest.ai_diagnosis.detected_error || latest.error_message;
-            document.getElementById('ai-root-cause').innerText = latest.ai_diagnosis.probable_root_cause || '-';
-            document.getElementById('ai-solution').innerText = latest.ai_diagnosis.suggested_solution || '-';
-            document.getElementById('ai-recommendation').innerText = latest.ai_diagnosis.ai_recommendation || '-';
-          }
-
-          // Panel 7: Code snippet
-          if (latest.code_context) {
-            document.getElementById('code-location-tag').innerText = latest.code_context.potential_code_location || 'Unknown';
-            document.getElementById('code-snippet-box').innerText = latest.code_context.code_snippet || 'No snippet';
-          }
-
-          // Panel 8: Slack
-          const slackBadge = document.getElementById('slack-status-badge');
-          slackBadge.className = latest.slack_delivered ? 'status-pill up' : 'status-pill down';
-          slackBadge.innerText = latest.slack_delivered ? 'SENT TO SLACK' : 'PENDING / MOCKED';
-          document.getElementById('slack-preview').innerText = 
-            `[Delivered to #devops-alerts]\nApplication: ${latest.container}\nError: ${latest.error_message}\nAI Root Cause: ${latest.ai_diagnosis?.probable_root_cause || 'None'}`;
-        }
-      } catch (e) {
-        console.error("Incident fetch error", e);
-      }
-
-      // 5. Deployments
-      try {
-        const res = await fetch('/api/deployments');
-        const data = await res.json();
-        const container = document.getElementById('deployment-history-list');
-        container.innerHTML = data.deployments.map(dep => `
-          <div style="background: #090d16; border: 1px solid #1e293b; border-radius: 0.4rem; padding: 0.75rem; margin-bottom: 0.5rem;">
-            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 0.4rem;">
-              <strong>Build #${dep.build_number} (${dep.commit})</strong>
-              <span class="status-pill ${dep.status === 'SUCCESS' ? 'up' : 'down'}" style="font-size: 0.7rem;">${dep.status}</span>
+            <div className="refresh-badge">
+              <span className="pulse-dot"></span>
+              <span>Live Polling Active (5s)</span>
             </div>
-            <div class="pipeline-stages">
-              ${dep.stages.map(s => `
-                <div class="pipeline-stage ${s.status === 'SUCCESS' ? 'stage-success' : 'stage-failed'}">
-                  <span>${s.name}</span>
+          </header>
+
+          <main className="dashboard-grid">
+            {/* Panel 1: System Overview */}
+            <div className="panel col-4">
+              <div className="panel-header">
+                <span className="panel-title">1. System Overview</span>
+                <span className={`status-pill ${systemStatus.status === 'UP' ? 'up' : 'down'}`}>
+                  {systemStatus.status === 'UP' ? 'HEALTHY' : 'DOWN'}
+                </span>
+              </div>
+              <div>
+                <div className="metric-value" style={{ color: systemStatus.status === 'UP' ? '#10b981' : '#ef4444' }}>
+                  {systemStatus.status === 'UP' ? 'ONLINE' : 'OFFLINE'}
                 </div>
-              `).join('')}
+                <div className="metric-sub">{systemStatus.service}</div>
+                <div className="metric-sub" style={{ marginTop: '0.5rem' }}>
+                  Uptime: <strong>{metrics.uptime?.formatted || '-'}</strong>
+                </div>
+              </div>
             </div>
-          </div>
-        `).join('');
-      } catch (e) {
-        console.error("Deployments fetch error", e);
-      }
+
+            {/* Panel 2: CPU Monitoring */}
+            <div className="panel col-4">
+              <div className="panel-header">
+                <span className="panel-title">2. CPU Monitoring</span>
+                <span className="metric-sub">{metrics.cpu?.cores || 0} Cores</span>
+              </div>
+              <div>
+                <div className="metric-value">{metrics.cpu?.percent || 0}%</div>
+                <div className="progress-bar-container">
+                  <div className="progress-bar" style={{ width: `${metrics.cpu?.percent || 0}%` }}></div>
+                </div>
+                <div className="metric-sub">Host Server CPU Utilization</div>
+              </div>
+            </div>
+
+            {/* Panel 3: Memory Monitoring */}
+            <div className="panel col-4">
+              <div className="panel-header">
+                <span className="panel-title">3. Memory Monitoring</span>
+                <span className="metric-sub">{metrics.memory?.used_gb || 0} GB used</span>
+              </div>
+              <div>
+                <div className="metric-value">{metrics.memory?.percent || 0}%</div>
+                <div className="progress-bar-container">
+                  <div className="progress-bar" style={{ width: `${metrics.memory?.percent || 0}%`, background: '#a855f7' }}></div>
+                </div>
+                <div className="metric-sub">
+                  Total: {metrics.memory?.total_gb || 0} GB | Free: {metrics.memory?.available_gb || 0} GB
+                </div>
+              </div>
+            </div>
+
+            {/* Panel 4: Application Log Records */}
+            <div className="panel col-6">
+              <div className="panel-header">
+                <span className="panel-title">4. Application Log Records (application.log)</span>
+                <span className="metric-sub">{logs.count || 0} lines</span>
+              </div>
+              <div className="terminal-window">
+                {logs.lines && logs.lines.length > 0 ? logs.lines.map((l, i) => (
+                  <div key={i} style={{
+                    color: l.includes('CRITICAL') ? '#fb7185' : l.includes('ERROR') ? '#f87171' : l.includes('INFO') ? '#60a5fa' : '#94a3b8'
+                  }}>
+                    {l}
+                  </div>
+                )) : 'Waiting for log entries...'}
+              </div>
+            </div>
+
+            {/* Panel 5: Error Detection */}
+            <div className="panel col-6">
+              <div className="panel-header">
+                <span className="panel-title">5. Error Detection (ERROR & CRITICAL)</span>
+                <span className="tech-pill">{incidents.length} Alerts</span>
+              </div>
+              <div className="terminal-window">
+                {incidents.length > 0 ? incidents.map((inc, i) => (
+                  <div key={i} style={{ marginBottom: '0.6rem', paddingBottom: '0.6rem', borderBottom: '1px solid #1f2937' }}>
+                    <span style={{ color: '#f87171', fontWeight: 600 }}>[{inc.level}]</span>{' '}
+                    <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>{inc.timestamp}</span>
+                    <div style={{ color: '#e2e8f0', marginTop: '0.2rem' }}>{inc.error_message}</div>
+                  </div>
+                )) : 'No critical anomalies detected in active monitoring cycle.'}
+              </div>
+            </div>
+
+            {/* Panel 6: AI Root Cause Analysis (Groq LLM) */}
+            <div className="panel col-6 panel-ai-highlight">
+              <div className="panel-header">
+                <span className="panel-title">6. AI Root Cause Analysis (Groq LLM)</span>
+                <span className="ai-badge">AI INSIGHT</span>
+              </div>
+              <div style={{ fontSize: '0.85rem' }}>
+                <div style={{ marginBottom: '0.5rem' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Detected Error:</span>{' '}
+                  <strong style={{ color: '#f87171' }}>
+                    {latestIncident?.ai_diagnosis?.detected_error || latestIncident?.error_message || 'None detected'}
+                  </strong>
+                </div>
+                <div style={{ marginBottom: '0.5rem' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Probable Root Cause:</span>
+                  <p style={{ color: '#e2e8f0', marginTop: '0.2rem' }}>
+                    {latestIncident?.ai_diagnosis?.probable_root_cause || 'FastAPI service operating within expected parameters.'}
+                  </p>
+                </div>
+                <div style={{ marginBottom: '0.5rem' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Suggested Solution:</span>
+                  <p style={{ color: '#38bdf8', marginTop: '0.2rem' }}>
+                    {latestIncident?.ai_diagnosis?.suggested_solution || 'No manual remediation required.'}
+                  </p>
+                </div>
+                <div>
+                  <span style={{ color: 'var(--text-muted)' }}>Operational Recommendation:</span>
+                  <p style={{ color: '#34d399', marginTop: '0.2rem' }}>
+                    {latestIncident?.ai_diagnosis?.ai_recommendation || 'Continuous telemetry active.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Panel 7: Code Path */}
+            <div className="panel col-6">
+              <div className="panel-header">
+                <span className="panel-title">7. Code Context & Location</span>
+                <span className="tech-pill">
+                  {latestIncident?.code_context?.potential_code_location || 'Repository Context'}
+                </span>
+              </div>
+              <div className="code-box">
+                {latestIncident?.code_context?.code_snippet || '# Code snippet around identified stack trace will display here...'}
+              </div>
+            </div>
+
+            {/* Panel 8: Slack Notifications */}
+            <div className="panel col-6">
+              <div className="panel-header">
+                <span className="panel-title">8. Slack Notifications (#devops-alerts)</span>
+                <span className={`status-pill ${latestIncident?.slack_delivered ? 'up' : 'down'}`}>
+                  {latestIncident?.slack_delivered ? 'SENT TO SLACK' : 'PENDING / MOCKED'}
+                </span>
+              </div>
+              <div className="terminal-window" style={{ height: '140px' }}>
+                {latestIncident ? (
+                  `[Delivered to #devops-alerts]\nApplication: ${latestIncident.container || 'user-service'}\nError: ${latestIncident.error_message}\nAI Root Cause: ${latestIncident.ai_diagnosis?.probable_root_cause || 'N/A'}`
+                ) : 'Waiting for actionable alert trigger...'}
+              </div>
+            </div>
+
+            {/* Panel 9: Deployment History */}
+            <div className="panel col-6">
+              <div className="panel-header">
+                <span className="panel-title">9. Deployment History (Jenkins CI/CD)</span>
+                <span className="tech-pill">7-Stage Pipeline</span>
+              </div>
+              <div>
+                {deployments.map((dep, idx) => (
+                  <div key={idx} style={{ background: '#090d16', border: '1px solid #1e293b', borderRadius: '0.4rem', padding: '0.75rem', marginBottom: '0.5rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '0.4rem' }}>
+                      <strong>Build #{dep.build_number} ({dep.commit})</strong>
+                      <span className={`status-pill ${dep.status === 'SUCCESS' ? 'up' : 'down'}`} style={{ fontSize: '0.7rem' }}>
+                        {dep.status}
+                      </span>
+                    </div>
+                    <div className="pipeline-stages">
+                      {dep.stages.map((stage, sIdx) => (
+                        <div key={sIdx} className={`pipeline-stage ${stage.status === 'SUCCESS' ? 'stage-success' : 'stage-failed'}`}>
+                          <span>{stage.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </main>
+        </div>
+      );
     }
 
-    function escapeHtml(string) {
-      if (!string) return '';
-      return String(string)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-    }
-
-    // Auto-refresh every 5 seconds
-    setInterval(updateDashboard, 5000);
-    window.onload = updateDashboard;
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
   </script>
 </body>
 </html>
-

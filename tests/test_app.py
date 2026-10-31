@@ -1,52 +1,55 @@
 """Unit and Integration Tests for AI-Powered DevOps Monitoring System.
 
-Executed during Jenkins CI/CD Stage 3: 'Test' (pytest tests/).
+Tech Stack: FastAPI, Python, PostgreSQL, React.
+Executed during Jenkins CI/CD Stage 3: 'Test' (pytest tests/ -v).
 """
 
-import os
 import pytest
-from application.app import app
+from fastapi import HTTPException
+from application.app import health, index, simulate_db_error, simulate_crash
 from monitoring.error_detector import ErrorDetector
 from monitoring.code_analyzer import CodeAnalyzer
 from monitoring.groq_analyzer import GroqAnalyzer
 from monitoring.metrics_collector import MetricsCollector
 
 
-@pytest.fixture
-def client():
-    """Flask test client fixture."""
-    app.config["TESTING"] = True
-    with app.test_client() as test_client:
-        yield test_client
-
-
 # =====================================================================
-# 1. Application Endpoint Tests
+# 1. FastAPI Application Endpoint Tests
 # =====================================================================
-def test_health_endpoint(client):
-    """Verify that Jenkins CI/CD stage 7 health check endpoint returns 200."""
-    response = client.get("/health")
-    assert response.status_code == 200
-    data = response.get_json()
+def test_health_endpoint():
+    """Verify that Jenkins CI/CD stage 7 health check endpoint returns 200 with healthy state."""
+    data = health()
     assert data["status"] == "healthy"
+    assert data["database"] == "postgresql"
+    assert data["service"] == "User Management Service"
     assert "uptime" in data
 
 
-def test_index_endpoint(client):
-    """Verify welcome root endpoint responds successfully."""
-    response = client.get("/")
-    assert response.status_code == 200
-    data = response.get_json()
+def test_index_endpoint():
+    """Verify FastAPI welcome root endpoint responds successfully with FastAPI framework info."""
+    data = index()
     assert data["status"] == "online"
+    assert data["framework"] == "FastAPI"
+    assert data["version"] == "1.0.0"
 
 
-def test_simulate_db_error_endpoint(client):
-    """Verify simulated DB error generates HTTP 500 and structured error response."""
-    response = client.get("/api/simulate-db-error")
-    assert response.status_code == 500
-    data = response.get_json()
-    assert data["status"] == "error_simulated"
-    assert data["error_type"] == "ConnectionError"
+def test_simulate_db_error_endpoint():
+    """Verify simulated DB error logs to application.log and raises HTTPException 500."""
+    with pytest.raises(HTTPException) as exc_info:
+        simulate_db_error()
+    assert exc_info.value.status_code == 500
+    detail = exc_info.value.detail
+    assert detail.get("status") == "error_simulated"
+    assert detail.get("error_type") == "ConnectionError"
+
+
+def test_simulate_crash_endpoint():
+    """Verify simulated crash raises HTTPException 500 with critical error payload."""
+    with pytest.raises(HTTPException) as exc_info:
+        simulate_crash()
+    assert exc_info.value.status_code == 500
+    detail = exc_info.value.detail
+    assert detail.get("status") == "critical_simulated"
 
 
 # =====================================================================
@@ -63,15 +66,15 @@ def test_error_detector_filtering():
 
 
 def test_code_analyzer_secret_masking():
-    """Verify sensitive tokens and credentials are automatically masked before LLM call."""
+    """Verify sensitive tokens and PostgreSQL credentials are automatically masked before LLM call."""
     analyzer = CodeAnalyzer()
     
-    raw_text = 'Database error: mongodb://admin:SecretPass123@localhost:27017, Groq Key: gsk_1234567890123456789012345'
+    raw_text = 'Database error: postgresql://admin:SecretPass123@localhost:5432/devops_db, Groq Key: gsk_1234567890123456789012345'
     masked = analyzer.mask_secrets(raw_text)
     
     assert "SecretPass123" not in masked
     assert "gsk_1234567890123456789012345" not in masked
-    assert "***MASKED" in masked or "***PASS***" in masked
+    assert "***PASS***" in masked or "***MASKED" in masked
 
 
 def test_code_analyzer_trace_parsing():
@@ -87,12 +90,12 @@ def test_code_analyzer_trace_parsing():
 
 
 def test_groq_analyzer_fallback():
-    """Verify Groq analyzer generates a valid diagnosis structure even when offline."""
+    """Verify Groq analyzer generates a valid diagnosis structure for PostgreSQL."""
     analyzer = GroqAnalyzer(api_key="")
     diagnosis = analyzer.analyze_incident(
         error_message="ConnectionError: Database unavailable",
         sanitized_trace="database.py:25",
-        code_snippet="client = MongoClient(uri)",
+        code_snippet="conn = psycopg2.connect(DATABASE_URL)",
         potential_location="database.py:25"
     )
     
@@ -102,6 +105,7 @@ def test_groq_analyzer_fallback():
     assert "potential_code_location" in diagnosis
     assert "suggested_solution" in diagnosis
     assert "ai_recommendation" in diagnosis
+    assert "PostgreSQL" in diagnosis["probable_root_cause"] or "PostgreSQL" in diagnosis["detected_error"]
 
 
 def test_metrics_collector():
@@ -113,4 +117,3 @@ def test_metrics_collector():
     assert "memory" in metrics
     assert "uptime" in metrics
     assert metrics["cpu"]["cores"] > 0
-

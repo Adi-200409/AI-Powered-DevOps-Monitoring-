@@ -25,6 +25,7 @@ class CodeAnalyzer:
         (re.compile(r'(?i)(password|passwd|pwd|secret|api_key|token|auth)\s*[:=]\s*["\']?([^"\'\s]+)["\']?'), r'\1="***MASKED***"'),
         (re.compile(r'gsk_[A-Za-z0-9_-]{20,}'), '***GROQ_API_KEY_MASKED***'),
         (re.compile(r'AKIA[0-9A-Z]{16}'), '***AWS_KEY_MASKED***'),
+        (re.compile(r'(?:postgres|postgresql)(?:\+psycopg2)?://([^:]+):([^@]+)@'), r'postgresql://***USER***:***PASS***@'),
         (re.compile(r'mongodb(?:\+srv)?://([^:]+):([^@]+)@'), r'mongodb://***USER***:***PASS***@'),
         (re.compile(r'Bearer\s+[A-Za-z0-9_\-\.]+'), 'Bearer ***TOKEN_MASKED***'),
         (re.compile(r'https://hooks\.slack\.com/services/[A-Za-z0-9/_-]+'), 'https://hooks.slack.com/services/***MASKED_WEBHOOK***'),

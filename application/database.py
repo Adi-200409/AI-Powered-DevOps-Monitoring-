@@ -1,53 +1,50 @@
-"""Database connector and management module for the sample application.
+"""PostgreSQL Database Connector Module for FastAPI Application.
 
-Handles MongoDB connections with health verification and simulated failure triggers
-for testing DevOps automated error detection.
+Handles PostgreSQL connection pooling and health verification.
+Provides simulated failure hooks for DevOps automated error detection.
 """
 
 import os
 import logging
 
 try:
-    from pymongo import MongoClient
-    from pymongo.errors import ServerSelectionTimeoutError, ConnectionFailure
+    import psycopg2
+    from psycopg2 import OperationalError
 except ImportError:
-    MongoClient = None
-    class ServerSelectionTimeoutError(Exception): pass
-    class ConnectionFailure(Exception): pass
+    psycopg2 = None
+    class OperationalError(Exception):
+        pass
 
 logger = logging.getLogger("application")
 
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/devops_db")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/devops_db")
 SIMULATE_DB_ERROR = os.getenv("SIMULATE_DB_ERROR", "false").lower() == "true"
 
 
-def get_db_client(uri: str = None):
-    """Establish connection to MongoDB instance.
-    
+def get_db_connection(database_url: str = None):
+    """Establish connection to PostgreSQL database instance.
+
     Raises:
-        ConnectionError: When MongoDB connection fails or is intentionally simulated.
+        ConnectionError: When PostgreSQL connection fails or is intentionally simulated.
     """
-    target_uri = uri or MONGO_URI
+    target_url = database_url or DATABASE_URL
 
-    # Simulation check for live testing scenarios
-    if SIMULATE_DB_ERROR or "invalid_host" in target_uri:
-        # Line 25 context matching project reference in documentation
+    # Line 25 context matching project failure scenario
+    if SIMULATE_DB_ERROR or "invalid_host" in target_url:
         logger.error("Database connection failed\nFile \"database.py\", line 25\nConnectionError: Database unavailable")
-        raise ConnectionError("Database unavailable: Failed to connect to MongoDB cluster at target URI.")
+        raise ConnectionError("Database unavailable: Failed to connect to PostgreSQL cluster at target URI.")
 
-    if MongoClient is None:
-        logger.warning("pymongo is not installed. Running in mock database mode.")
+    if psycopg2 is None:
+        logger.warning("psycopg2 is not installed. Running in mock PostgreSQL database mode.")
         return None
 
     try:
-        client = MongoClient(target_uri, serverSelectionTimeoutMS=2000)
-        # Verify server state
-        client.admin.command("ping")
-        logger.info("Successfully connected to database.")
-        return client
-    except (ServerSelectionTimeoutError, ConnectionFailure) as exc:
+        conn = psycopg2.connect(target_url, connect_timeout=3)
+        logger.info("Successfully connected to PostgreSQL database.")
+        return conn
+    except (OperationalError, Exception) as exc:
         logger.error(
-            "Database connection failed - %s: %s",
+            "Database connection failed - %s: %s\nFile \"database.py\", line 25\nConnectionError: Database unavailable",
             exc.__class__.__name__,
             str(exc),
             exc_info=True
@@ -56,14 +53,21 @@ def get_db_client(uri: str = None):
 
 
 def get_application_data():
-    """Retrieve sample application items from database."""
+    """Retrieve sample application items from PostgreSQL database."""
     try:
-        client = get_db_client()
-        if client is None:
-            return [{"id": 1, "name": "Mock Item", "price": 29.99}]
-        db = client.get_default_database()
-        collection = db["items"]
-        return list(collection.find({}, {"_id": 0}).limit(10))
+        conn = get_db_connection()
+        if conn is None:
+            # Mock data when PostgreSQL is not connected yet
+            return [
+                {"id": 1, "name": "DevOps Microservice", "status": "active", "price": 49.99},
+                {"id": 2, "name": "AI Triage Engine", "status": "active", "price": 99.00}
+            ]
+
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT id, name, status, price FROM items LIMIT 10;")
+            columns = [desc[0] for desc in cursor.description]
+            results = [dict(zip(columns, row)) for row in cursor.fetchall()]
+            return results
     except Exception as exc:
-        logger.error("Failed to query application items: %s", str(exc), exc_info=True)
+        logger.error("Failed to query PostgreSQL items: %s", str(exc), exc_info=True)
         raise
