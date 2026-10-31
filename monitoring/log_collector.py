@@ -81,3 +81,4 @@ if __name__ == "__main__":
     print(f"Found {len(recent)} recent log lines:")
     for l in recent:
         print("  ", l)
+

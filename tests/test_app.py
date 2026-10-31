@@ -113,3 +113,4 @@ def test_metrics_collector():
     assert "memory" in metrics
     assert "uptime" in metrics
     assert metrics["cpu"]["cores"] > 0
+

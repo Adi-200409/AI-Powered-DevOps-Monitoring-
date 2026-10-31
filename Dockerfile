@@ -28,3 +28,4 @@ EXPOSE 5000 5050
 
 # Default entrypoint launches the application
 CMD ["python", "-m", "application.app"]
+

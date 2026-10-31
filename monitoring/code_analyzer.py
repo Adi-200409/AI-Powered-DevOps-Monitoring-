@@ -122,3 +122,4 @@ if __name__ == "__main__":
     res = analyzer.analyze("Database connection failed", sample_trace)
     print("Potential Location:", res["potential_code_location"])
     print("Snippet preview:\n", res["code_snippet"][:200])
+

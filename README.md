@@ -234,3 +234,4 @@ To test the entire automated incident workflow:
 1. **Secret Masking:** Never send raw passwords, API keys, AWS credentials, or MongoDB URI credentials to Groq. `code_analyzer.py` automatically enforces token masking.
 2. **Advisory Wording:** AI output is always presented as `potential code location` and `probable root cause` — it advises the human engineer, and does not alter production code directly in version 1.
 3. **Groq Free Tier Optimization:** The monitor implements deduplication caching (`_hash_incident`) and interval throttling to operate comfortably within free-tier rate limits.
+

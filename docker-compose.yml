@@ -95,3 +95,4 @@ volumes:
 networks:
   devops-network:
     driver: bridge
+

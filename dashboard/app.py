@@ -129,3 +129,4 @@ if __name__ == "__main__":
     host = os.getenv("DASHBOARD_HOST", "0.0.0.0")
     print(f"Starting DevOps Central Monitoring Dashboard on http://{host}:{port}")
     app.run(host=host, port=port, debug=False)
+
