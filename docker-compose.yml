@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  # -------------------------------------------------------------
+  # 1. MongoDB Database
+  # -------------------------------------------------------------
+  mongodb:
+    image: mongo:7.0
+    container_name: devops-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: devops_db
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - devops-network
+
+  # -------------------------------------------------------------
+  # 2. Monitored Sample Application (Flask)
+  # -------------------------------------------------------------
+  application:
+    build:
+      context: .
+      dockerfile: application/Dockerfile
+    container_name: user-service
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - APP_PORT=5000
+      - MONGO_URI=mongodb://mongodb:27017/devops_db
+      - LOG_FILE_PATH=/app/logs/application.log
+    volumes:
+      - shared-logs:/app/logs
+    depends_on:
+      - mongodb
+    networks:
+      - devops-network
+
+  # -------------------------------------------------------------
+  # 3. Python Monitoring Service (Log tailer + Groq + Slack)
+  # -------------------------------------------------------------
+  monitoring:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: devops-monitor
+    restart: unless-stopped
+    command: ["python", "-m", "monitoring.main"]
+    env_file:
+      - .env
+    environment:
+      - LOG_FILE_PATH=/workspace/logs/application.log
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+    volumes:
+      - shared-logs:/workspace/logs
+      - .:/workspace
+    depends_on:
+      - application
+    networks:
+      - devops-network
+
+  # -------------------------------------------------------------
+  # 4. Centralized Web Monitoring Dashboard
+  # -------------------------------------------------------------
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: devops-dashboard
+    restart: unless-stopped
+    command: ["python", "-m", "dashboard.app"]
+    ports:
+      - "5050:5050"
+    env_file:
+      - .env
+    environment:
+      - DASHBOARD_PORT=5050
+      - LOG_FILE_PATH=/workspace/logs/application.log
+    volumes:
+      - shared-logs:/workspace/logs
+      - .:/workspace
+    depends_on:
+      - monitoring
+    networks:
+      - devops-network
+
+volumes:
+  mongo-data:
+  shared-logs:
+
+networks:
+  devops-network:
+    driver: bridge

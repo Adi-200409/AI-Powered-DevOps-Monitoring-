@@ -1,0 +1,21 @@
+# Web Application & Dashboard
+flask>=3.0.0
+gunicorn>=22.0.0
+
+# Database
+pymongo>=4.8.0
+
+# AI / LLM Integration
+groq>=0.11.0
+
+# Notifications & HTTP
+requests>=2.32.0
+
+# System Metrics & Monitoring
+psutil>=6.0.0
+
+# Environment & Utilities
+python-dotenv>=1.0.1
+
+# Testing
+pytest>=8.0.0

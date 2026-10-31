@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI-Powered DevOps Monitoring Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: #111827;
+      --card-border: #1f2937;
+      --card-hover: #1e293b;
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+      --accent: #38bdf8;
+      --accent-glow: rgba(56, 189, 248, 0.15);
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --purple: #a855f7;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      line-height: 1.5;
+      padding: 1.5rem;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .brand-title {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .brand-title h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(to right, #38bdf8, #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .tag {
+      font-size: 0.75rem;
+      background: rgba(56, 189, 248, 0.12);
+      color: var(--accent);
+      padding: 0.2rem 0.5rem;
+      border-radius: 9999px;
+      font-weight: 600;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .refresh-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--success);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--success);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.4; }
+      50% { opacity: 1; }
+      100% { opacity: 0.4; }
+    }
+
+    /* 9-Panel Grid Layout */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 1.25rem;
+    }
+
+    .panel {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 0.75rem;
+      padding: 1.2rem;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .panel-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* Highlighted Panel for Groq AI */
+    .panel-ai-highlight {
+      border: 1px solid #6366f1;
+      box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
+      background: linear-gradient(180deg, rgba(30, 27, 75, 0.4) 0%, var(--card-bg) 100%);
+    }
+
+    .panel-ai-highlight .panel-title {
+      color: #a5b4fc;
+    }
+
+    /* Grid Span Configurations */
+    .col-4 { grid-column: span 4; }
+    .col-6 { grid-column: span 6; }
+    .col-8 { grid-column: span 8; }
+    .col-12 { grid-column: span 12; }
+
+    @media (max-width: 1024px) {
+      .col-4, .col-6, .col-8 { grid-column: span 12; }
+    }
+
+    /* Metrics & Progress Bars */
+    .metric-value {
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .metric-sub {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+
+    .progress-bar-container {
+      width: 100%;
+      height: 8px;
+      background: #1f2937;
+      border-radius: 9999px;
+      overflow: hidden;
+      margin-top: 0.75rem;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 9999px;
+      transition: width 0.4s ease;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .status-pill.up {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--success);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .status-pill.down {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--danger);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    /* Console / Log Viewer */
+    .terminal-window {
+      background: #06090e;
+      border: 1px solid #1e293b;
+      border-radius: 0.5rem;
+      padding: 0.75rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      color: #94a3b8;
+      height: 180px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+
+    .log-line-error { color: #f87171; font-weight: 600; }
+    .log-line-critical { color: #fb7185; font-weight: 700; }
+    .log-line-info { color: #60a5fa; }
+
+    /* Code View */
+    .code-box {
+      background: #090d16;
+      border: 1px solid #1e293b;
+      border-radius: 0.5rem;
+      padding: 0.75rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      color: #cbd5e1;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+
+    /* Pipeline Stages */
+    .pipeline-stages {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      overflow-x: auto;
+      padding: 0.5rem 0;
+    }
+
+    .pipeline-stage {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0.5rem 0.75rem;
+      background: #1f2937;
+      border-radius: 0.4rem;
+      font-size: 0.75rem;
+      min-width: 100px;
+      text-align: center;
+    }
+
+    .stage-success { border-left: 3px solid var(--success); }
+    .stage-failed { border-left: 3px solid var(--danger); }
+
+    .ai-badge {
+      background: linear-gradient(90deg, #6366f1, #a855f7);
+      color: #fff;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.2rem 0.6rem;
+      border-radius: 9999px;
+      letter-spacing: 0.05em;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Dashboard Header -->
+  <header>
+    <div class="brand-title">
+      <h1>AI-Powered DevOps Monitoring System</h1>
+      <span class="tag">Incident Resolution v1.0</span>
+    </div>
+    <div class="header-actions">
+      <div class="refresh-badge">
+        <span class="pulse-dot"></span>
+        <span>Live Polling Active (5s)</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- 9-Panel Grid Wireframe -->
+  <main class="dashboard-grid">
+
+    <!-- Panel 1: System Overview -->
+    <div class="panel col-4">
+      <div class="panel-header">
+        <span class="panel-title">1. System Overview</span>
+        <span id="app-status-badge" class="status-pill down">CHECKING</span>
+      </div>
+      <div>
+        <div class="metric-value" id="app-health-val">ONLINE</div>
+        <div class="metric-sub" id="app-health-details">Monitoring Target: User Management Service (Flask)</div>
+        <div class="metric-sub" style="margin-top: 0.5rem;">Uptime: <strong id="app-uptime-val">-</strong></div>
+      </div>
+    </div>
+
+    <!-- Panel 2: CPU Monitoring (metrics_collector.py) -->
+    <div class="panel col-4">
+      <div class="panel-header">
+        <span class="panel-title">2. CPU Monitoring</span>
+        <span class="metric-sub" id="cpu-cores">- Cores</span>
+      </div>
+      <div>
+        <div class="metric-value"><span id="cpu-percent">0</span>%</div>
+        <div class="progress-bar-container">
+          <div id="cpu-bar" class="progress-bar" style="width: 0%;"></div>
+        </div>
+        <div class="metric-sub">Host Server CPU Utilization</div>
+      </div>
+    </div>
+
+    <!-- Panel 3: Memory Monitoring (metrics_collector.py) -->
+    <div class="panel col-4">
+      <div class="panel-header">
+        <span class="panel-title">3. Memory Monitoring</span>
+        <span class="metric-sub" id="ram-used-text">- GB used</span>
+      </div>
+      <div>
+        <div class="metric-value"><span id="ram-percent">0</span>%</div>
+        <div class="progress-bar-container">
+          <div id="ram-bar" class="progress-bar" style="width: 0%; background: #a855f7;"></div>
+        </div>
+        <div class="metric-sub" id="ram-total-text">RAM Allocation: -</div>
+      </div>
+    </div>
+
+    <!-- Panel 4: Log Viewer (log_collector.py) -->
+    <div class="panel col-6">
+      <div class="panel-header">
+        <span class="panel-title">4. Application Log Records (application.log)</span>
+        <span class="metric-sub" id="log-count">0 lines</span>
+      </div>
+      <div class="terminal-window" id="log-viewer">Streaming logs...</div>
+    </div>
+
+    <!-- Panel 5: Error Detection (error_detector.py) -->
+    <div class="panel col-6">
+      <div class="panel-header">
+        <span class="panel-title">5. Error Detection (ERROR & CRITICAL)</span>
+        <span id="incident-count-badge" class="tag">0 Alerts</span>
+      </div>
+      <div class="terminal-window" id="error-list">No critical anomalies detected in active cycle.</div>
+    </div>
+
+    <!-- Panel 6: AI Analysis (groq_analyzer.py) - HIGHLIGHTED -->
+    <div class="panel col-6 panel-ai-highlight">
+      <div class="panel-header">
+        <span class="panel-title">6. AI Root Cause Analysis (Groq LLM)</span>
+        <span class="ai-badge">AI INSIGHT</span>
+      </div>
+      <div style="font-size: 0.85rem;">
+        <div style="margin-bottom: 0.5rem;">
+          <span style="color: var(--text-muted);">Detected Error:</span>
+          <strong id="ai-detected-error" style="color: #f87171;">None</strong>
+        </div>
+        <div style="margin-bottom: 0.5rem;">
+          <span style="color: var(--text-muted);">Probable Root Cause:</span>
+          <p id="ai-root-cause" style="color: #e2e8f0; margin-top: 0.2rem;">System operating within expected parameters.</p>
+        </div>
+        <div style="margin-bottom: 0.5rem;">
+          <span style="color: var(--text-muted);">Suggested Solution:</span>
+          <p id="ai-solution" style="color: #38bdf8; margin-top: 0.2rem;">-</p>
+        </div>
+        <div>
+          <span style="color: var(--text-muted);">Operational Recommendation:</span>
+          <p id="ai-recommendation" style="color: #34d399; margin-top: 0.2rem;">-</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel 7: Code Path (code_analyzer.py) -->
+    <div class="panel col-6">
+      <div class="panel-header">
+        <span class="panel-title">7. Code Context & Location</span>
+        <span class="tag" id="code-location-tag">Repository Context</span>
+      </div>
+      <div class="code-box" id="code-snippet-box">
+# Code snippet around identified stack trace will display here...
+      </div>
+    </div>
+
+    <!-- Panel 8: Slack Notifications (slack_alert.py) -->
+    <div class="panel col-6">
+      <div class="panel-header">
+        <span class="panel-title">8. Slack Notifications (#devops-alerts)</span>
+        <span id="slack-status-badge" class="status-pill down">READY</span>
+      </div>
+      <div class="terminal-window" id="slack-preview" style="height: 140px;">
+Waiting for actionable alert trigger...
+      </div>
+    </div>
+
+    <!-- Panel 9: Deployment History (Jenkins CI/CD) -->
+    <div class="panel col-6">
+      <div class="panel-header">
+        <span class="panel-title">9. Deployment History (Jenkins 7-Stage Pipeline)</span>
+        <span class="tag">CI/CD</span>
+      </div>
+      <div id="deployment-history-list">
+        <!-- Jenkins deployments rendered via JS -->
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    async function updateDashboard() {
+      // 1. System Health
+      try {
+        const res = await fetch('/api/system-status');
+        const data = await res.json();
+        const badge = document.getElementById('app-status-badge');
+        const healthVal = document.getElementById('app-health-val');
+        if (data.status === 'UP') {
+          badge.className = 'status-pill up';
+          badge.innerText = 'HEALTHY';
+          healthVal.innerText = 'ONLINE';
+          healthVal.style.color = '#10b981';
+        } else {
+          badge.className = 'status-pill down';
+          badge.innerText = 'SERVICE DOWN';
+          healthVal.innerText = 'OFFLINE';
+          healthVal.style.color = '#ef4444';
+        }
+      } catch (e) {
+        console.error("Health check error", e);
+      }
+
+      // 2. Metrics
+      try {
+        const res = await fetch('/api/metrics');
+        const m = await res.json();
+        document.getElementById('cpu-percent').innerText = m.cpu.percent;
+        document.getElementById('cpu-bar').style.width = m.cpu.percent + '%';
+        document.getElementById('cpu-cores').innerText = m.cpu.cores + ' Cores';
+
+        document.getElementById('ram-percent').innerText = m.memory.percent;
+        document.getElementById('ram-bar').style.width = m.memory.percent + '%';
+        document.getElementById('ram-used-text').innerText = m.memory.used_gb + ' GB used';
+        document.getElementById('ram-total-text').innerText = `Total: ${m.memory.total_gb} GB | Free: ${m.memory.available_gb} GB`;
+        document.getElementById('app-uptime-val').innerText = m.uptime.formatted;
+      } catch (e) {
+        console.error("Metrics fetch error", e);
+      }
+
+      // 3. Logs
+      try {
+        const res = await fetch('/api/logs');
+        const data = await res.json();
+        const viewer = document.getElementById('log-viewer');
+        document.getElementById('log-count').innerText = data.count + ' lines';
+        viewer.innerHTML = data.lines.map(line => {
+          if (line.includes('ERROR')) return `<span class="log-line-error">${escapeHtml(line)}</span>`;
+          if (line.includes('CRITICAL')) return `<span class="log-line-critical">${escapeHtml(line)}</span>`;
+          if (line.includes('INFO')) return `<span class="log-line-info">${escapeHtml(line)}</span>`;
+          return escapeHtml(line);
+        }).join('\n');
+        viewer.scrollTop = viewer.scrollHeight;
+      } catch (e) {
+        console.error("Logs fetch error", e);
+      }
+
+      // 4. Incidents & AI Analysis
+      try {
+        const res = await fetch('/api/incidents');
+        const data = await res.json();
+        const badge = document.getElementById('incident-count-badge');
+        badge.innerText = data.count + ' Incidents';
+
+        if (data.incidents && data.incidents.length > 0) {
+          const latest = data.incidents[0];
+          const errList = document.getElementById('error-list');
+          errList.innerHTML = data.incidents.map(inc => `
+            <div style="margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid #1f2937;">
+              <span style="color: #f87171; font-weight: 600;">[${inc.level}]</span>
+              <span style="color: #94a3b8; font-size: 0.75rem;">${inc.timestamp}</span><br>
+              <span style="color: #e2e8f0;">${escapeHtml(inc.error_message)}</span>
+            </div>
+          `).join('');
+
+          // Panel 6: AI
+          if (latest.ai_diagnosis) {
+            document.getElementById('ai-detected-error').innerText = latest.ai_diagnosis.detected_error || latest.error_message;
+            document.getElementById('ai-root-cause').innerText = latest.ai_diagnosis.probable_root_cause || '-';
+            document.getElementById('ai-solution').innerText = latest.ai_diagnosis.suggested_solution || '-';
+            document.getElementById('ai-recommendation').innerText = latest.ai_diagnosis.ai_recommendation || '-';
+          }
+
+          // Panel 7: Code snippet
+          if (latest.code_context) {
+            document.getElementById('code-location-tag').innerText = latest.code_context.potential_code_location || 'Unknown';
+            document.getElementById('code-snippet-box').innerText = latest.code_context.code_snippet || 'No snippet';
+          }
+
+          // Panel 8: Slack
+          const slackBadge = document.getElementById('slack-status-badge');
+          slackBadge.className = latest.slack_delivered ? 'status-pill up' : 'status-pill down';
+          slackBadge.innerText = latest.slack_delivered ? 'SENT TO SLACK' : 'PENDING / MOCKED';
+          document.getElementById('slack-preview').innerText = 
+            `[Delivered to #devops-alerts]\nApplication: ${latest.container}\nError: ${latest.error_message}\nAI Root Cause: ${latest.ai_diagnosis?.probable_root_cause || 'None'}`;
+        }
+      } catch (e) {
+        console.error("Incident fetch error", e);
+      }
+
+      // 5. Deployments
+      try {
+        const res = await fetch('/api/deployments');
+        const data = await res.json();
+        const container = document.getElementById('deployment-history-list');
+        container.innerHTML = data.deployments.map(dep => `
+          <div style="background: #090d16; border: 1px solid #1e293b; border-radius: 0.4rem; padding: 0.75rem; margin-bottom: 0.5rem;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 0.4rem;">
+              <strong>Build #${dep.build_number} (${dep.commit})</strong>
+              <span class="status-pill ${dep.status === 'SUCCESS' ? 'up' : 'down'}" style="font-size: 0.7rem;">${dep.status}</span>
+            </div>
+            <div class="pipeline-stages">
+              ${dep.stages.map(s => `
+                <div class="pipeline-stage ${s.status === 'SUCCESS' ? 'stage-success' : 'stage-failed'}">
+                  <span>${s.name}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `).join('');
+      } catch (e) {
+        console.error("Deployments fetch error", e);
+      }
+    }
+
+    function escapeHtml(string) {
+      if (!string) return '';
+      return String(string)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    // Auto-refresh every 5 seconds
+    setInterval(updateDashboard, 5000);
+    window.onload = updateDashboard;
+  </script>
+</body>
+</html>
