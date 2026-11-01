@@ -8,6 +8,7 @@ import os
 import sys
 import time
 import json
+import tempfile
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 
@@ -22,27 +23,49 @@ STATE_FILE = os.getenv("INCIDENTS_STATE_FILE", os.path.join(os.path.dirname(os.p
 
 def load_incidents() -> List[Dict[str, Any]]:
     """Loads recorded incidents from local JSON cache."""
-    if os.path.exists(STATE_FILE):
-        try:
-            with open(STATE_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            return []
-    return []
+    if not os.path.exists(STATE_FILE):
+        return []
+
+    try:
+        with open(STATE_FILE, "r", encoding="utf-8") as f:
+            incidents = json.load(f)
+    except (OSError, json.JSONDecodeError) as exc:
+        raise RuntimeError(f"Unable to load incident state from {STATE_FILE!r}") from exc
+
+    if not isinstance(incidents, list) or any(not isinstance(item, dict) for item in incidents):
+        raise ValueError(f"Incident state in {STATE_FILE!r} must be a JSON array of objects")
+
+    return incidents
 
 
-def save_incident(incident_data: Dict[str, Any]):
+def save_incident(incident_data: Dict[str, Any]) -> None:
     """Appends incident to local state cache for the dashboard."""
     incidents = load_incidents()
     incidents.insert(0, incident_data)
     # Retain the 50 most recent incidents
     incidents = incidents[:50]
-    os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
+
+    state_path = os.path.abspath(STATE_FILE)
+    state_directory = os.path.dirname(state_path)
+    temporary_path = None
     try:
-        with open(STATE_FILE, "w", encoding="utf-8") as f:
+        os.makedirs(state_directory, exist_ok=True)
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=state_directory,
+            prefix=f".{os.path.basename(state_path)}.",
+            suffix=".tmp",
+            delete=False
+        ) as f:
+            temporary_path = f.name
             json.dump(incidents, f, indent=2)
-    except Exception as exc:
-        print(f"[MonitoringOrchestrator] Error saving incident state: {exc}")
+        os.replace(temporary_path, state_path)
+    except OSError as exc:
+        raise RuntimeError(f"Unable to save incident state to {state_path!r}") from exc
+    finally:
+        if temporary_path and os.path.exists(temporary_path):
+            os.remove(temporary_path)
 
 
 def process_error_event(
@@ -131,4 +154,3 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\nMonitoring service stopped by user.")
         sys.exit(0)
-
