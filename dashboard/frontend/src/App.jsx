@@ -2,26 +2,25 @@ import React, { useState } from 'react';
 import { useDevOpsData } from './hooks/useDevOpsData';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
-import TelemetryChart from './components/TelemetryChart';
-import ServiceCards from './components/ServiceCards';
-import RightSidebar from './components/RightSidebar';
-import DiagnosticsModal from './components/DiagnosticsModal';
+import OverviewPage from './components/OverviewPage';
+import OperationsPage from './components/OperationsPage';
 
 export default function App() {
-  const [activeNavTab, setActiveNavTab] = useState('analytics');
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalInitialTab, setModalInitialTab] = useState('ai');
-
+  const [activeNavTab, setActiveNavTab] = useState('overview');
   const {
     systemStatus,
     metrics,
+    metricsHistory,
+    metricsHistoryError,
     logs,
     incidents,
+    errorIntelligence,
     deployments,
     selectedIncidentId,
     setSelectedIncidentId,
     activeIncident,
     backendConnected,
+    endpointStatus,
     isRefreshing,
     lastUpdated,
     pollInterval,
@@ -29,91 +28,93 @@ export default function App() {
     cpuHistory,
     memoryHistory,
     fetchData,
+    remediateIncident,
     triggerSimulation
   } = useDevOpsData();
 
-  const handleOpenDiagnostics = (tab = 'ai') => {
-    setModalInitialTab(tab);
-    setModalOpen(true);
+  const pageLabels = {
+    overview: 'Overview',
+    monitoring: 'Live monitoring',
+    logs: 'Log explorer',
+    errors: 'Error intelligence',
+    incidents: 'Incident management',
+    rootcause: 'Root cause analysis',
+    ai: 'AI troubleshooter',
+    cicd: 'CI/CD pipelines',
+    infrastructure: 'Infrastructure',
+    services: 'Services & apps',
+    alerts: 'Alerts & notifications',
+    reporting: 'Reports & analytics',
+    integrations: 'Integrations',
+    settings: 'Settings'
   };
 
-  const handleSimulateFromUI = (type = 'db_error') => {
+  const handleSimulate = (type = 'db_error') => {
     triggerSimulation(type);
-    handleOpenDiagnostics('ai');
+    setActiveNavTab('incidents');
   };
 
   return (
-    <div className="nixtio-app-layout">
-      {/* 1. Left Navigation Rail (Floating Slim Sidebar) */}
-      <Sidebar
-        activeTab={activeNavTab}
-        onSelectTab={(tab) => {
-          setActiveNavTab(tab);
-          if (tab === 'logs') handleOpenDiagnostics('logs');
-          else if (tab === 'cicd') handleOpenDiagnostics('pipeline');
-          else if (tab === 'alerts') handleOpenDiagnostics('slack');
-          else if (tab === 'telemetry') handleOpenDiagnostics('ai');
-          else if (tab === 'services') handleOpenDiagnostics('logs');
-        }}
-        onOpenLogs={() => handleOpenDiagnostics('logs')}
-        onOpenTriage={() => handleOpenDiagnostics('ai')}
-        onSimulate={() => handleSimulateFromUI('db_error')}
-      />
+    <div className="ops-app">
+      <Sidebar activeTab={activeNavTab} onSelectTab={setActiveNavTab} onSimulate={handleSimulate} />
 
-      {/* 2. Main Work Area */}
-      <div className="nixtio-main-wrapper">
-        {/* Top Header Bar */}
+      <div className="ops-main">
         <TopBar
-          isRefreshing={isRefreshing}
-          onRefresh={fetchData}
-          onSimulate={() => handleSimulateFromUI('db_error')}
+          pageTitle={pageLabels[activeNavTab] || 'Overview'}
           backendConnected={backendConnected}
+          isRefreshing={isRefreshing}
+          lastUpdated={lastUpdated}
           activeAlertCount={incidents.length}
+          onRefresh={fetchData}
+          onSimulate={handleSimulate}
+          onOpenAlerts={() => setActiveNavTab('incidents')}
         />
 
-        {/* Content Columns: Left Main (Chart + Cards) & Right Sidebar */}
-        <main className="nixtio-content-columns">
-          {/* Center Column: System Workload Wave Chart + Monitored Services Cards */}
-          <div className="center-analytics-column">
-            {/* Wave Chart Section */}
-            <TelemetryChart
+        <main className="ops-content">
+          {activeNavTab === 'overview' ? (
+            <OverviewPage
+              systemStatus={systemStatus}
+              metrics={metrics}
+              metricsHistory={metricsHistory}
+              metricsHistoryError={metricsHistoryError}
+              backendConnected={backendConnected}
+              endpointStatus={endpointStatus}
+              hasMetricHistory={cpuHistory.length > 0}
+              logs={logs}
+              incidents={incidents}
+              deployments={deployments}
+              selectedIncidentId={selectedIncidentId}
+              onSelectIncident={setSelectedIncidentId}
+              onNavigate={setActiveNavTab}
               cpuHistory={cpuHistory}
               memoryHistory={memoryHistory}
             />
-
-            {/* Monitored Microservices & Pipelines Section */}
-            <ServiceCards
+          ) : (
+            <OperationsPage
+              activeTab={activeNavTab}
               systemStatus={systemStatus}
-              onSelectService={(targetTab) => {
-                handleOpenDiagnostics(targetTab);
-              }}
+              metrics={metrics}
+              metricsHistory={metricsHistory}
+              metricsHistoryError={metricsHistoryError}
+              backendConnected={backendConnected}
+              endpointStatus={endpointStatus}
+              hasMetricHistory={cpuHistory.length > 0}
+              logs={logs}
+              incidents={incidents}
+              errorIntelligence={errorIntelligence}
+              deployments={deployments}
+              selectedIncidentId={selectedIncidentId}
+              activeIncident={activeIncident}
+              onSelectIncident={setSelectedIncidentId}
+              isRefreshing={isRefreshing}
+              onRefresh={fetchData}
+              remediateIncident={remediateIncident}
+              pollInterval={pollInterval}
+              setPollInterval={setPollInterval}
             />
-          </div>
-
-          {/* Right Column: Active Incidents + SRE Operations + Sunset Gradient Banner */}
-          <RightSidebar
-            onOpenDetails={(targetTab) => {
-              handleOpenDiagnostics(targetTab);
-            }}
-            activeIncidentCount={incidents.length}
-          />
+          )}
         </main>
       </div>
-
-      {/* 3. Detailed SRE Diagnostics Modal (Groq AI, Code Context, Slack, Jenkins, Logs) */}
-      <DiagnosticsModal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        initialTab={modalInitialTab}
-        activeIncident={activeIncident}
-        incidents={incidents}
-        onSelectIncident={setSelectedIncidentId}
-        deployments={deployments}
-        logs={logs}
-        onSimulate={triggerSimulation}
-        isRefreshing={isRefreshing}
-        onRefresh={fetchData}
-      />
     </div>
   );
 }

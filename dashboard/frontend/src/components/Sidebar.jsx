@@ -1,118 +1,101 @@
 import React from 'react';
 import {
   Activity,
-  PieChart,
+  BarChart3,
+  Bell,
+  Cpu,
+  FileText,
+  GitBranch,
+  Globe,
+  HardDrive,
+  Layers3,
   Server,
-  Layers,
-  MessageSquare,
   Settings,
-  LogOut,
-  Zap,
-  Terminal
+  Shield,
+  Sparkles,
+  Workflow,
+  Zap
 } from 'lucide-react';
 
-export default function Sidebar({
-  activeTab = 'analytics',
-  onSelectTab,
-  onOpenLogs,
-  onOpenTriage,
-  onSimulate
-}) {
+const groups = [
+  {
+    label: 'WORKSPACE',
+    items: [{ id: 'overview', label: 'Overview', icon: Activity }]
+  },
+  {
+    label: 'OBSERVABILITY',
+    items: [
+      { id: 'monitoring', label: 'Live monitoring', icon: Cpu },
+      { id: 'logs', label: 'Log explorer', icon: FileText },
+      { id: 'errors', label: 'Error intelligence', icon: Shield },
+      { id: 'incidents', label: 'Incidents', icon: Workflow },
+      { id: 'rootcause', label: 'Root cause', icon: GitBranch },
+      { id: 'ai', label: 'AI troubleshooter', icon: Sparkles }
+    ]
+  },
+  {
+    label: 'DELIVERY & FLEET',
+    items: [
+      { id: 'cicd', label: 'CI/CD pipelines', icon: Layers3 },
+      { id: 'infrastructure', label: 'Infrastructure', icon: HardDrive },
+      { id: 'services', label: 'Services & apps', icon: Server }
+    ]
+  },
+  {
+    label: 'ADMINISTRATION',
+    items: [
+      { id: 'alerts', label: 'Alerts & notifications', icon: Bell },
+      { id: 'reporting', label: 'Reports & analytics', icon: BarChart3 },
+      { id: 'integrations', label: 'Integrations', icon: Globe },
+      { id: 'settings', label: 'Settings', icon: Settings }
+    ]
+  }
+];
+
+export default function Sidebar({ activeTab = 'overview', onSelectTab, onSimulate }) {
   return (
-    <nav className="left-nav-rail">
-      {/* Brand Icon Mark */}
-      <div className="nav-brand-mark" title="AetherOps DevOps Observability">
-        <div className="brand-dot-glow"></div>
-        <Activity size={22} color="#ffffff" />
+    <aside className="ops-sidebar">
+      <div className="ops-brand">
+        <div className="ops-brand-mark"><Activity size={19} /></div>
+        <div><strong>AetherOps</strong><span>OPERATIONS CONSOLE</span></div>
       </div>
 
-      {/* Main Navigation Stack */}
-      <div className="nav-icon-group">
-        {/* 1. Live System Observability */}
-        <button
-          className={`nav-rail-btn ${activeTab === 'telemetry' ? 'active' : ''}`}
-          onClick={() => onSelectTab('telemetry')}
-          title="System Telemetry & Health"
-        >
-          <Activity size={18} />
-        </button>
-
-        {/* 2. Performance Analytics & Workload Curves (Active in Screenshot) */}
-        <button
-          className={`nav-rail-btn ${activeTab === 'analytics' ? 'active' : ''}`}
-          onClick={() => onSelectTab('analytics')}
-          title="Workload & Performance Curves"
-        >
-          <PieChart size={18} />
-        </button>
-
-        {/* 3. Microservices & Containers */}
-        <button
-          className={`nav-rail-btn ${activeTab === 'services' ? 'active' : ''}`}
-          onClick={() => onSelectTab('services')}
-          title="Monitored Microservices"
-        >
-          <Server size={18} />
-        </button>
-
-        {/* 4. CI/CD Pipeline Deployments */}
-        <button
-          className={`nav-rail-btn ${activeTab === 'cicd' ? 'active' : ''}`}
-          onClick={() => onSelectTab('cicd')}
-          title="Jenkins 7-Stage CI/CD Pipeline"
-        >
-          <Layers size={18} />
-        </button>
-
-        {/* 5. Slack Webhook Alerts */}
-        <button
-          className={`nav-rail-btn has-badge ${activeTab === 'alerts' ? 'active' : ''}`}
-          onClick={() => onSelectTab('alerts')}
-          title="Slack Notifications (#devops-alerts)"
-        >
-          <MessageSquare size={18} />
-          <span className="nav-badge-pink">2</span>
-        </button>
-
-        {/* 6. Live Application Log Terminal */}
-        <button
-          className={`nav-rail-btn ${activeTab === 'logs' ? 'active' : ''}`}
-          onClick={onOpenLogs}
-          title="Streaming Application Logs (application.log)"
-        >
-          <Terminal size={18} />
-        </button>
+      <div className="ops-workspace-switcher">
+        <span className="ops-workspace-avatar">P</span>
+        <span><strong>Platform Engineering</strong><small>Production workspace</small></span>
+        <span className="ops-chevron">⌄</span>
       </div>
 
-      {/* Bottom Actions */}
-      <div className="nav-bottom-group">
-        {/* Instant Failure Simulation Trigger */}
-        <button
-          className="nav-rail-btn simulate-btn"
-          onClick={onSimulate}
-          title="Inject Test PostgreSQL Failure (Fault Injection)"
-        >
-          <Zap size={18} color="#f59e0b" />
-        </button>
+      <nav className="ops-navigation" aria-label="Primary navigation">
+        {groups.map((group) => (
+          <div className="ops-nav-group" key={group.label}>
+            <div className="ops-nav-label">{group.label}</div>
+            {group.items.map(({ id, label, icon: Icon }) => (
+              <button
+                type="button"
+                key={id}
+                className={`ops-nav-item ${activeTab === id ? 'is-active' : ''}`}
+                onClick={() => onSelectTab?.(id)}
+                aria-current={activeTab === id ? 'page' : undefined}
+              >
+                <Icon size={16} strokeWidth={1.8} />
+                <span>{label}</span>
+              </button>
+            ))}
+          </div>
+        ))}
+      </nav>
 
-        {/* Cluster Configuration */}
-        <button
-          className="nav-rail-btn"
-          onClick={() => onSelectTab('settings')}
-          title="Cluster Telemetry Settings"
-        >
-          <Settings size={18} />
+      <div className="ops-sidebar-footer">
+        <button type="button" className="ops-nav-item ops-simulate-link" onClick={() => onSimulate?.('db_error')}>
+          <Zap size={16} /><span>Simulate test fault</span>
         </button>
-
-        {/* Refresh Session */}
-        <button
-          className="nav-rail-btn"
-          onClick={() => window.location.reload()}
-          title="Reload Observability Session"
-        >
-          <LogOut size={18} />
-        </button>
+        <div className="ops-sidebar-user">
+          <div className="ops-user-avatar">DE</div>
+          <div><strong>DevOps Engineer</strong><span>Reliability team</span></div>
+          <span className="ops-user-menu">···</span>
+        </div>
       </div>
-    </nav>
+    </aside>
   );
 }

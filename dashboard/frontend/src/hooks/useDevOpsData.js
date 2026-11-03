@@ -9,120 +9,204 @@ import {
 
 const API_BASE = import.meta.env?.VITE_API_URL || '';
 
+async function fetchJson(path) {
+  const response = await fetch(`${API_BASE}${path}`, { signal: AbortSignal.timeout(3000) });
+  if (!response.ok) {
+    let detail = '';
+    try {
+      const body = await response.json();
+      detail = typeof body.detail === 'string' ? `: ${body.detail}` : '';
+    } catch {
+      detail = '';
+    }
+    throw new Error(`Request failed (${response.status}) for ${path}${detail}`);
+  }
+  return response.json();
+}
+
 export function useDevOpsData() {
   const [systemStatus, setSystemStatus] = useState(initialMockSystemStatus);
   const [metrics, setMetrics] = useState(initialMockMetrics);
   const [logs, setLogs] = useState({ lines: initialMockLogs, count: initialMockLogs.length });
   const [incidents, setIncidents] = useState(initialMockIncidents);
+  const [errorIntelligence, setErrorIntelligence] = useState({
+    patterns: [],
+    correlations: [],
+    anomalies: [],
+    summary: {},
+    remediation: { enabled: false, approval_required: true, available_runbooks: [] }
+  });
   const [deployments, setDeployments] = useState(initialMockDeployments);
   const [selectedIncidentId, setSelectedIncidentId] = useState(initialMockIncidents[0]?.id || null);
 
   const [backendConnected, setBackendConnected] = useState(false);
+  const [endpointStatus, setEndpointStatus] = useState({
+    systemStatus: false,
+    metrics: false,
+    metricsHistory: false,
+    logs: false,
+    incidents: false,
+    errorIntelligence: false,
+    deployments: false
+  });
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState(new Date());
+  const [lastUpdated, setLastUpdated] = useState(null);
   const [pollInterval, setPollInterval] = useState(5000); // ms, 0 = paused
 
-  // Telemetry trend arrays (last 20 data points)
-  const [cpuHistory, setCpuHistory] = useState([
-    18, 22, 25, 20, 24, 29, 32, 28, 25, 26, 30, 35, 29, 31, 28, 26, 27, 29, 28, 28.4
-  ]);
-  const [memoryHistory, setMemoryHistory] = useState([
-    42, 43, 43, 44, 44, 45, 45, 46, 46, 46, 47, 46, 46, 45, 46, 46, 47, 46, 46.2, 46.2
-  ]);
+  const [cpuHistory, setCpuHistory] = useState([]);
+  const [memoryHistory, setMemoryHistory] = useState([]);
+  const [metricsHistory, setMetricsHistory] = useState([]);
+  const [metricsHistoryError, setMetricsHistoryError] = useState(null);
+  const refreshInFlight = useRef(false);
+  const selectedLogSource = useRef('all');
 
-  const pollIntervalRef = useRef(pollInterval);
-  pollIntervalRef.current = pollInterval;
-
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (source) => {
+    if (source) selectedLogSource.current = source;
+    const requestedSource = selectedLogSource.current;
+    if (refreshInFlight.current) return;
+    refreshInFlight.current = true;
     setIsRefreshing(true);
-    let apiSuccess = false;
-
     try {
-      // 1. System Health
-      const sRes = await fetch(`${API_BASE}/api/system-status`, { signal: AbortSignal.timeout(3000) });
-      if (sRes.ok) {
-        const data = await sRes.json();
-        setSystemStatus(data);
-        apiSuccess = true;
-      }
-    } catch {
-      // Keep previous or fallback
-    }
+      const results = await Promise.allSettled([
+        fetchJson('/api/system-status'),
+        fetchJson('/api/metrics'),
+        fetchJson(`/api/logs?max_lines=150&source=${encodeURIComponent(requestedSource)}`),
+        fetchJson('/api/incidents'),
+        fetchJson('/api/deployments'),
+        fetchJson('/api/error-intelligence')
+      ]);
+      const nextEndpointStatus = {
+        systemStatus: results[0].status === 'fulfilled',
+        metrics: results[1].status === 'fulfilled',
+        logs: results[2].status === 'fulfilled',
+        incidents: results[3].status === 'fulfilled',
+        deployments: results[4].status === 'fulfilled',
+        errorIntelligence: results[5].status === 'fulfilled'
+      };
 
-    try {
-      // 2. Metrics
-      const mRes = await fetch(`${API_BASE}/api/metrics`, { signal: AbortSignal.timeout(3000) });
-      if (mRes.ok) {
-        const data = await mRes.json();
+      if (nextEndpointStatus.systemStatus) setSystemStatus(results[0].value);
+      if (nextEndpointStatus.metrics) {
+        const data = results[1].value;
         setMetrics(data);
-        apiSuccess = true;
-
         if (data.cpu?.percent !== undefined) {
           setCpuHistory((prev) => [...prev.slice(1), data.cpu.percent]);
         }
         if (data.memory?.percent !== undefined) {
           setMemoryHistory((prev) => [...prev.slice(1), data.memory.percent]);
         }
+      }
+      if (nextEndpointStatus.logs) {
+        const data = results[2].value;
+        const lines = Array.isArray(data.lines) ? data.lines : [];
+        setLogs((current) => ({
+          lines,
+          count: data.count ?? lines.length,
+          source: data.source ?? requestedSource,
+          containerName: data.container_name,
+          summary: data.summary,
+          sourceErrors: data.source_errors || {},
+          streamStatus: current.source === requestedSource ? current.streamStatus : 'connecting'
+        }));
       } else {
-        // Subtle simulated oscillation when offline
-        const jitter = (Math.random() - 0.48) * 3;
-        setCpuHistory((prev) => {
-          const last = prev[prev.length - 1];
-          const next = Math.max(5, Math.min(95, parseFloat((last + jitter).toFixed(1))));
-          return [...prev.slice(1), next];
-        });
+        const error = results[2].reason;
+        setLogs((current) => ({
+          ...current,
+          source: requestedSource,
+          sourceErrors: {
+            ...current.sourceErrors,
+            [requestedSource]: error instanceof Error ? error.message : 'Log request failed'
+          },
+          streamStatus: 'connecting'
+        }));
       }
-    } catch {
-      // Subtle oscillation
-      const jitter = (Math.random() - 0.48) * 3;
-      setCpuHistory((prev) => {
-        const last = prev[prev.length - 1];
-        const next = Math.max(5, Math.min(95, parseFloat((last + jitter).toFixed(1))));
-        return [...prev.slice(1), next];
-      });
+      if (nextEndpointStatus.incidents) {
+        const data = results[3].value;
+        const nextIncidents = Array.isArray(data.incidents) ? data.incidents : [];
+        setIncidents(nextIncidents);
+        setSelectedIncidentId((current) =>
+          nextIncidents.some((incident) => incident.id === current)
+            ? current
+            : nextIncidents[0]?.id || null
+        );
+      }
+      if (nextEndpointStatus.deployments) {
+        const data = results[4].value;
+        setDeployments(Array.isArray(data.deployments) ? data.deployments : []);
+      }
+      if (nextEndpointStatus.errorIntelligence) {
+        setErrorIntelligence(results[5].value);
+      }
+
+      let historyAvailable = false;
+      if (nextEndpointStatus.metrics) {
+        try {
+          const history = await fetchJson('/api/metrics/history?limit=10080&window_seconds=604800');
+          if (!Array.isArray(history.samples)) {
+            throw new Error('Metrics history response did not contain a samples array');
+          }
+          setMetricsHistory(history.samples);
+          setMetricsHistoryError(null);
+          historyAvailable = true;
+        } catch (error) {
+          setMetricsHistoryError(error instanceof Error ? error.message : 'Metrics history request failed');
+        }
+      } else {
+        setMetricsHistoryError('Metrics are unavailable; history has not been refreshed.');
+      }
+
+      nextEndpointStatus.metricsHistory = historyAvailable;
+      setEndpointStatus(nextEndpointStatus);
+      setBackendConnected(Object.values(nextEndpointStatus).some(Boolean));
+      setLastUpdated(new Date());
+    } finally {
+      refreshInFlight.current = false;
+      setIsRefreshing(false);
     }
-
-    try {
-      // 3. Application Logs
-      const lRes = await fetch(`${API_BASE}/api/logs?max_lines=150`, { signal: AbortSignal.timeout(3000) });
-      if (lRes.ok) {
-        const data = await lRes.json();
-        if (data.lines && data.lines.length > 0) {
-          setLogs(data);
-          apiSuccess = true;
-        }
-      }
-    } catch {}
-
-    try {
-      // 4. Incidents & AI Triage
-      const iRes = await fetch(`${API_BASE}/api/incidents`, { signal: AbortSignal.timeout(3000) });
-      if (iRes.ok) {
-        const data = await iRes.json();
-        if (data.incidents && data.incidents.length > 0) {
-          setIncidents(data.incidents);
-          setSelectedIncidentId((current) => current || data.incidents[0]?.id);
-          apiSuccess = true;
-        }
-      }
-    } catch {}
-
-    try {
-      // 5. Jenkins Deployments
-      const dRes = await fetch(`${API_BASE}/api/deployments`, { signal: AbortSignal.timeout(3000) });
-      if (dRes.ok) {
-        const data = await dRes.json();
-        if (data.deployments) {
-          setDeployments(data.deployments);
-          apiSuccess = true;
-        }
-      }
-    } catch {}
-
-    setBackendConnected(apiSuccess);
-    setLastUpdated(new Date());
-    setTimeout(() => setIsRefreshing(false), 300);
   }, []);
+
+  useEffect(() => {
+    const source = logs.source || 'all';
+    const streamUrl = `${API_BASE}/api/logs/stream?source=${encodeURIComponent(source)}`;
+    const eventSource = new EventSource(streamUrl);
+
+    eventSource.onopen = () => {
+      setLogs((current) => ({ ...current, streamStatus: 'live' }));
+    };
+    eventSource.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        if (payload.error) {
+          setLogs((current) => ({
+            ...current,
+            sourceErrors: { ...current.sourceErrors, [payload.source]: payload.error }
+          }));
+          return;
+        }
+        if (typeof payload.line !== 'string') return;
+
+        const line = source === 'all' ? `[${payload.source}] ${payload.line}` : payload.line;
+        setLogs((current) => {
+          const nextLines = [...(current.lines || []), line].slice(-500);
+          return {
+            ...current,
+            lines: nextLines,
+            count: nextLines.length,
+            sourceErrors: { ...current.sourceErrors, [payload.source]: undefined }
+          };
+        });
+      } catch {
+        setLogs((current) => ({ ...current, streamStatus: 'error' }));
+      }
+    };
+    eventSource.onerror = () => {
+      setLogs((current) => ({
+        ...current,
+        streamStatus: eventSource.readyState === EventSource.CLOSED ? 'offline' : 'reconnecting'
+      }));
+    };
+
+    return () => eventSource.close();
+  }, [logs.source]);
 
   useEffect(() => {
     fetchData();
@@ -163,6 +247,7 @@ export function useDevOpsData() {
         },
         slack_delivered: true
       };
+
     } else if (type === 'crash') {
       simulatedIncident = {
         id: `inc-${Date.now()}`,
@@ -211,16 +296,41 @@ export function useDevOpsData() {
     } catch {}
   };
 
+  const remediateIncident = useCallback(async (incidentId, runbook) => {
+    const response = await fetch(`${API_BASE}/api/incidents/${encodeURIComponent(incidentId)}/remediate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ runbook, approved: true })
+    });
+    if (!response.ok) {
+      let detail = `Remediation request failed (${response.status})`;
+      try {
+        const body = await response.json();
+        if (typeof body.detail === 'string') detail = body.detail;
+      } catch {
+        // Keep the HTTP status as the explicit failure when no response body is available.
+      }
+      throw new Error(detail);
+    }
+    const result = await response.json();
+    await fetchData();
+    return result;
+  }, [fetchData]);
+
   return {
     systemStatus,
     metrics,
+    metricsHistory,
+    metricsHistoryError,
     logs,
     incidents,
+    errorIntelligence,
     deployments,
     selectedIncidentId,
     setSelectedIncidentId,
     activeIncident,
     backendConnected,
+    endpointStatus,
     isRefreshing,
     lastUpdated,
     pollInterval,
@@ -228,7 +338,7 @@ export function useDevOpsData() {
     cpuHistory,
     memoryHistory,
     fetchData,
+    remediateIncident,
     triggerSimulation
   };
 }
-

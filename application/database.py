@@ -6,6 +6,7 @@ Provides simulated failure hooks for DevOps automated error detection.
 
 import os
 import logging
+import time
 
 try:
     import psycopg2
@@ -53,6 +54,34 @@ def get_db_connection(database_url: str = None):
             exc_info=True
         )
         raise ConnectionError(f"Database unavailable: {str(exc)}") from exc
+
+
+def probe_database():
+    """Check PostgreSQL connectivity without returning connection details or logging failures."""
+    database_url = os.getenv("DATABASE_URL", DATABASE_URL)
+    if os.getenv("MOCK_DB", "false").lower() == "true" or database_url == "mock":
+        return {"status": "UNKNOWN", "reason": "mock database mode"}
+    if os.getenv("SIMULATE_DB_ERROR", "false").lower() == "true":
+        return {"status": "DOWN", "reason": "database failure simulation is enabled"}
+    if psycopg2 is None:
+        return {"status": "UNKNOWN", "reason": "PostgreSQL driver is unavailable"}
+
+    started_at = time.perf_counter()
+    try:
+        connection = psycopg2.connect(database_url, connect_timeout=1)
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT 1")
+                cursor.fetchone()
+        finally:
+            connection.close()
+    except psycopg2.Error as exc:
+        return {"status": "DOWN", "error_type": type(exc).__name__}
+
+    return {
+        "status": "UP",
+        "latency_ms": round((time.perf_counter() - started_at) * 1000, 1),
+    }
 
 
 def get_application_data():
