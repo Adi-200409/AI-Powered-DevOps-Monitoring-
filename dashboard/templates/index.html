@@ -250,6 +250,164 @@
       border-radius: 9999px;
       letter-spacing: 0.05em;
     }
+
+    .ai-analysis-panel {
+      border-color: rgba(129, 140, 248, 0.55);
+      background:
+        radial-gradient(ellipse at top left, rgba(99, 102, 241, 0.16), transparent 55%),
+        var(--card-bg);
+    }
+
+    .ai-analysis-heading {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .ai-analysis-mark {
+      display: grid;
+      place-items: center;
+      width: 40px;
+      height: 40px;
+      border: 1px solid rgba(165, 180, 252, 0.32);
+      border-radius: 12px;
+      background: rgba(99, 102, 241, 0.18);
+      color: #c7d2fe;
+      font-size: 1.2rem;
+    }
+
+    .ai-analysis-title {
+      color: #f8fafc;
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .ai-analysis-subtitle {
+      margin-top: 0.2rem;
+      color: var(--text-muted);
+      font-size: 0.76rem;
+    }
+
+    .ai-analysis-content {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .ai-analysis-meta {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      color: var(--text-muted);
+      font-size: 0.72rem;
+    }
+
+    .ai-analysis-meta time { margin-left: auto; }
+
+    .ai-severity {
+      padding: 0.25rem 0.55rem;
+      border: 1px solid rgba(248, 113, 113, 0.35);
+      border-radius: 999px;
+      background: rgba(248, 113, 113, 0.1);
+      color: #fca5a5;
+      font-weight: 700;
+      text-transform: capitalize;
+    }
+
+    .ai-insight {
+      padding: 0.8rem 0.9rem;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      border-radius: 12px;
+      background: rgba(6, 9, 14, 0.35);
+    }
+
+    .ai-insight-label {
+      margin-bottom: 0.35rem;
+      color: #a5b4fc;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+
+    .ai-insight p {
+      color: #e2e8f0;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      overflow-wrap: anywhere;
+    }
+
+    .ai-insight-error {
+      border-color: rgba(248, 113, 113, 0.28);
+      background: rgba(248, 113, 113, 0.08);
+    }
+
+    .ai-insight-error p {
+      color: #fecaca;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.76rem;
+    }
+
+    .ai-insight-cause {
+      border-color: rgba(129, 140, 248, 0.28);
+      background: rgba(99, 102, 241, 0.08);
+    }
+
+    .ai-insight-steps {
+      border-color: rgba(56, 189, 248, 0.25);
+    }
+
+    .ai-insight-steps .ai-insight-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      color: #7dd3fc;
+    }
+
+    .ai-remediation-text { white-space: pre-wrap; }
+
+    .ai-copy-button {
+      border: 1px solid rgba(125, 211, 252, 0.3);
+      border-radius: 6px;
+      padding: 0.2rem 0.5rem;
+      background: rgba(56, 189, 248, 0.1);
+      color: #bae6fd;
+      font: inherit;
+      font-size: 0.68rem;
+      cursor: pointer;
+    }
+
+    .ai-recommendation {
+      padding: 0.8rem 0.9rem;
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      border-radius: 12px;
+      background: rgba(16, 185, 129, 0.07);
+    }
+
+    .ai-recommendation .ai-insight-label { color: #6ee7b7; }
+    .ai-recommendation p { color: #d1fae5; }
+
+    .ai-advisory {
+      color: var(--text-muted);
+      font-size: 0.68rem;
+      line-height: 1.5;
+    }
+
+    .ai-empty-state {
+      padding: 2rem 1rem;
+      border: 1px dashed rgba(165, 180, 252, 0.35);
+      border-radius: 12px;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    .ai-empty-state strong {
+      display: block;
+      margin-bottom: 0.35rem;
+      color: #f8fafc;
+    }
   </style>
 </head>
 <body>
@@ -260,6 +418,23 @@
 
     function App() {
       const [systemStatus, setSystemStatus] = useState({ status: 'CHECKING', service: 'FastAPI Microservice' });
+      const [copyState, setCopyState] = useState('');
+      const [logSource, setLogSource] = useState('all');
+      const [logSearch, setLogSearch] = useState('');
+      const [logLevel, setLogLevel] = useState('ALL');
+      const [logService, setLogService] = useState('ALL');
+      const [logStartDate, setLogStartDate] = useState('');
+      const [logEndDate, setLogEndDate] = useState('');
+      const [logStreamStatus, setLogStreamStatus] = useState('connecting');
+      const [showSearchHistory, setShowSearchHistory] = useState(false);
+      const [searchHistory, setSearchHistory] = useState(() => {
+        try {
+          const saved = JSON.parse(localStorage.getItem('log-explorer-search-history') || '[]');
+          return Array.isArray(saved) ? saved.filter((query) => typeof query === 'string').slice(0, 8) : [];
+        } catch {
+          return [];
+        }
+      });
       const [metrics, setMetrics] = useState({
         cpu: { percent: 0, cores: 0 },
         memory: { percent: 0, used_gb: 0, total_gb: 0, available_gb: 0 },
@@ -268,6 +443,15 @@
       const [logs, setLogs] = useState({ lines: [], count: 0 });
       const [incidents, setIncidents] = useState([]);
       const [deployments, setDeployments] = useState([]);
+
+      const fetchLogs = async (source = logSource) => {
+        const response = await fetch(`/api/logs?max_lines=150&source=${encodeURIComponent(source)}`);
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(typeof data.detail === 'string' ? data.detail : `Log request failed (${response.status})`);
+        }
+        setLogs(data);
+      };
 
       const fetchData = async () => {
         try {
@@ -280,11 +464,6 @@
         try {
           const mRes = await fetch('/api/metrics');
           if (mRes.ok) setMetrics(await mRes.json());
-        } catch (e) {}
-
-        try {
-          const lRes = await fetch('/api/logs');
-          if (lRes.ok) setLogs(await lRes.json());
         } catch (e) {}
 
         try {
@@ -310,7 +489,112 @@
         return () => clearInterval(interval);
       }, []);
 
+      useEffect(() => {
+        let active = true;
+        fetchLogs(logSource).catch((error) => {
+          if (active) setLogs((current) => ({
+            ...current,
+            source: logSource,
+            source_errors: { [logSource]: error.message }
+          }));
+        });
+
+        const eventSource = new EventSource(`/api/logs/stream?source=${encodeURIComponent(logSource)}`);
+        eventSource.onopen = () => setLogStreamStatus('live');
+        eventSource.onerror = () => setLogStreamStatus('reconnecting');
+        eventSource.onmessage = (event) => {
+          try {
+            const payload = JSON.parse(event.data);
+            if (payload.error) {
+              setLogs((current) => ({
+                ...current,
+                source_errors: { ...current.source_errors, [payload.source]: payload.error }
+              }));
+              return;
+            }
+            if (typeof payload.line !== 'string') return;
+            const line = logSource === 'all' ? `[${payload.source}] ${payload.line}` : payload.line;
+            setLogs((current) => {
+              const lines = [...(current.lines || []), line].slice(-500);
+              return { ...current, lines, count: lines.length };
+            });
+          } catch {
+            setLogStreamStatus('error');
+          }
+        };
+        return () => {
+          active = false;
+          eventSource.close();
+        };
+      }, [logSource]);
+
+      const rememberLogSearch = (query) => {
+        const normalized = query.trim();
+        if (!normalized) return;
+        const nextHistory = [normalized, ...searchHistory.filter((item) => item !== normalized)].slice(0, 8);
+        setSearchHistory(nextHistory);
+        setShowSearchHistory(false);
+        try {
+          localStorage.setItem('log-explorer-search-history', JSON.stringify(nextHistory));
+        } catch (error) {
+          console.error('Unable to save log search history.', error);
+        }
+      };
+
+      const parsedLogs = (logs.lines || []).reduce((entries, value) => {
+        const raw = String(value || '');
+        let text = raw.trim();
+        let source = logSource;
+        const sourceMatch = text.match(/^\[(application|docker)\]\s*/i);
+        if (sourceMatch) {
+          source = sourceMatch[1].toLowerCase();
+          text = text.slice(sourceMatch[0].length);
+        }
+        const timestampMatch = text.match(/^(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)/);
+        const timestamp = timestampMatch?.[1] || '';
+        if (timestampMatch) text = text.slice(timestampMatch[0].length).trim();
+        const levelMatch = text.match(/\[(DEBUG|INFO|WARN|WARNING|ERROR|CRITICAL)\]|\b(DEBUG|INFO|WARN|WARNING|ERROR|CRITICAL)\b/i);
+        if (!timestamp && !levelMatch && entries.length && entries[entries.length - 1].source === source) {
+          const previous = entries[entries.length - 1];
+          previous.lines.push(raw);
+          previous.raw += `\n${raw}`;
+          return entries;
+        }
+        let level = (levelMatch?.[1] || levelMatch?.[2] || 'UNKNOWN').toUpperCase();
+        if (level === 'WARN') level = 'WARNING';
+        const withoutLevel = text.replace(/\[(DEBUG|INFO|WARN|WARNING|ERROR|CRITICAL)\]|\b(DEBUG|INFO|WARN|WARNING|ERROR|CRITICAL)\b/i, '');
+        const serviceMatch = withoutLevel.match(/\[([^\]]+)\]/);
+        const service = serviceMatch?.[1]?.trim() || (source === 'docker' ? logs.container_name || 'container' : 'application');
+        const message = withoutLevel.replace(/\[[^\]]+\]/, '').replace(/^[-:>\s]+/, '').trim();
+        entries.push({ raw, lines: [raw], source, timestamp, level, service, message: message || text });
+        return entries;
+      }, []);
+      const availableLogServices = [...new Set(parsedLogs.map((entry) => entry.service))].sort();
+      const visibleLogs = parsedLogs.filter((entry) => {
+        const date = entry.timestamp.slice(0, 10);
+        return (logLevel === 'ALL' || entry.level === logLevel)
+          && (logService === 'ALL' || entry.service === logService)
+          && (!logStartDate || (date && date >= logStartDate))
+          && (!logEndDate || (date && date <= logEndDate))
+          && (!logSearch.trim() || entry.raw.toLowerCase().includes(logSearch.toLowerCase())
+            || entry.service.toLowerCase().includes(logSearch.toLowerCase())
+            || entry.level.toLowerCase().includes(logSearch.toLowerCase()));
+      });
+
       const latestIncident = incidents.length > 0 ? incidents[0] : null;
+      const latestDiagnosis = latestIncident?.ai_diagnosis || {};
+      const suggestedSolution = latestDiagnosis.suggested_solution || '';
+
+      const copySuggestedSolution = async () => {
+        try {
+          await navigator.clipboard.writeText(suggestedSolution);
+          setCopyState('copied');
+        } catch (error) {
+          console.error('Unable to copy the suggested remediation.', error);
+          setCopyState('error');
+        }
+        setTimeout(() => setCopyState(''), 2000);
+      };
 
       return (
         <div>
@@ -381,17 +665,74 @@
             {/* Panel 4: Application Log Records */}
             <div className="panel col-6">
               <div className="panel-header">
-                <span className="panel-title">4. Application Log Records (application.log)</span>
-                <span className="metric-sub">{logs.count || 0} lines</span>
+                <span className="panel-title">4. Log Explorer <span className="metric-sub">({logStreamStatus})</span></span>
+                <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                  <select value={logSource} onChange={(event) => setLogSource(event.target.value)} aria-label="Log source">
+                    <option value="all">All sources</option>
+                    <option value="application">Application log</option>
+                    <option value="docker">Docker logs</option>
+                  </select>
+                  <button className="tech-pill" onClick={() => fetchLogs(logSource).catch((error) => setLogs((current) => ({
+                    ...current,
+                    source_errors: { ...current.source_errors, [logSource]: error.message }
+                  })))}>Refresh</button>
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.5rem' }}>
+                <input
+                  type="search"
+                  placeholder="Search message, service, level, or stack trace"
+                  value={logSearch}
+                  onChange={(event) => setLogSearch(event.target.value)}
+                  onKeyDown={(event) => event.key === 'Enter' && rememberLogSearch(logSearch)}
+                  style={{ flex: '1 1 220px', minWidth: '180px' }}
+                />
+                <button className="tech-pill" onClick={() => setShowSearchHistory((visible) => !visible)}>Recent searches</button>
+                <select value={logLevel} onChange={(event) => setLogLevel(event.target.value)} aria-label="Log level">
+                  <option value="ALL">All levels</option>
+                  <option value="INFO">INFO</option>
+                  <option value="WARNING">WARNING</option>
+                  <option value="ERROR">ERROR</option>
+                  <option value="CRITICAL">CRITICAL</option>
+                  <option value="UNKNOWN">UNKNOWN</option>
+                </select>
+                <select value={logService} onChange={(event) => setLogService(event.target.value)} aria-label="Log service">
+                  <option value="ALL">All services</option>
+                  {availableLogServices.map((service) => <option key={service} value={service}>{service}</option>)}
+                </select>
+                <label className="metric-sub">From <input type="date" value={logStartDate} onChange={(event) => setLogStartDate(event.target.value)} /></label>
+                <label className="metric-sub">To <input type="date" value={logEndDate} onChange={(event) => setLogEndDate(event.target.value)} /></label>
+              </div>
+              {showSearchHistory && searchHistory.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '0.5rem' }}>
+                  {searchHistory.map((query) => (
+                    <button key={query} className="tech-pill" onClick={() => { setLogSearch(query); setShowSearchHistory(false); }}>{query}</button>
+                  ))}
+                </div>
+              )}
+              {Object.entries(logs.source_errors || {}).map(([failedSource, message]) => message && (
+                <div className="metric-sub" key={failedSource} style={{ color: '#f59e0b', marginBottom: '0.4rem' }}>
+                  {failedSource} logs unavailable: {message}
+                </div>
+              ))}
+              <div className="metric-sub" style={{ marginBottom: '0.4rem' }}>
+                {visibleLogs.length} of {parsedLogs.length} events · {parsedLogs.filter((entry) => entry.level === 'ERROR' || entry.level === 'CRITICAL').length} errors
               </div>
               <div className="terminal-window">
-                {logs.lines && logs.lines.length > 0 ? logs.lines.map((l, i) => (
-                  <div key={i} style={{
-                    color: l.includes('CRITICAL') ? '#fb7185' : l.includes('ERROR') ? '#f87171' : l.includes('INFO') ? '#60a5fa' : '#94a3b8'
-                  }}>
-                    {l}
+                {visibleLogs.length > 0 ? visibleLogs.map((entry, i) => (
+                  <div key={`${entry.raw}-${i}`} style={{ marginBottom: '0.55rem', color: entry.level === 'CRITICAL' ? '#fb7185' : entry.level === 'ERROR' ? '#f87171' : entry.level === 'WARNING' ? '#facc15' : '#94a3b8' }}>
+                    <div>
+                      <strong>[{entry.level}]</strong> <span>{entry.source} / {entry.service}</span>{' '}
+                      <time>{entry.timestamp || 'No timestamp'}</time> — {entry.message}
+                    </div>
+                    {entry.lines.length > 1 && (
+                      <details style={{ marginLeft: '1rem' }}>
+                        <summary>{entry.lines.length - 1} continuation / stack-trace lines</summary>
+                        <pre style={{ whiteSpace: 'pre-wrap', color: '#cbd5e1' }}>{entry.lines.slice(1).join('\n')}</pre>
+                      </details>
+                    )}
                   </div>
-                )) : 'Waiting for log entries...'}
+                )) : 'No matching log events.'}
               </div>
             </div>
 
@@ -413,37 +754,55 @@
             </div>
 
             {/* Panel 6: AI Root Cause Analysis (Groq LLM) */}
-            <div className="panel col-6 panel-ai-highlight">
+            <div className="panel col-6 panel-ai-highlight ai-analysis-panel">
               <div className="panel-header">
-                <span className="panel-title">6. AI Root Cause Analysis (Groq LLM)</span>
-                <span className="ai-badge">AI INSIGHT</span>
+                <div className="ai-analysis-heading">
+                  <span className="ai-analysis-mark">✦</span>
+                  <div>
+                    <h2 className="ai-analysis-title">AI incident triage</h2>
+                    <p className="ai-analysis-subtitle">A clear diagnosis and the next best actions</p>
+                  </div>
+                </div>
+                <span className="ai-badge">AI-ASSISTED</span>
               </div>
-              <div style={{ fontSize: '0.85rem' }}>
-                <div style={{ marginBottom: '0.5rem' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Detected Error:</span>{' '}
-                  <strong style={{ color: '#f87171' }}>
-                    {latestIncident?.ai_diagnosis?.detected_error || latestIncident?.error_message || 'None detected'}
-                  </strong>
+              {latestIncident ? (
+                <div className="ai-analysis-content">
+                  <div className="ai-analysis-meta">
+                    <span className="ai-severity">{latestDiagnosis.severity || latestIncident.level || 'Severity unknown'}</span>
+                    <span>{latestIncident.container || 'Service unavailable'}</span>
+                    {latestIncident.timestamp && <time>{latestIncident.timestamp}</time>}
+                  </div>
+                  <section className="ai-insight ai-insight-error">
+                    <div className="ai-insight-label">What happened</div>
+                    <p>{latestDiagnosis.detected_error || latestIncident.error_message || 'No error details were captured for this incident.'}</p>
+                  </section>
+                  <section className="ai-insight ai-insight-cause">
+                    <div className="ai-insight-label">Probable root cause</div>
+                    <p>{latestDiagnosis.probable_root_cause || 'Root cause analysis is not available for this incident yet.'}</p>
+                  </section>
+                  <section className="ai-insight ai-insight-steps">
+                    <div className="ai-insight-label">
+                      <span>Suggested next steps</span>
+                      {suggestedSolution && (
+                        <button className="ai-copy-button" onClick={copySuggestedSolution}>
+                          {copyState === 'copied' ? 'Copied' : copyState === 'error' ? 'Copy failed' : 'Copy steps'}
+                        </button>
+                      )}
+                    </div>
+                    <p className="ai-remediation-text">{suggestedSolution || 'No remediation steps were provided for this incident.'}</p>
+                  </section>
+                  <section className="ai-recommendation">
+                    <div className="ai-insight-label">Operational recommendation</div>
+                    <p>{latestDiagnosis.ai_recommendation || 'Review the incident and validate the suggested actions before making changes.'}</p>
+                  </section>
+                  <p className="ai-advisory">AI-generated guidance can be incomplete. Verify each action before applying it.</p>
                 </div>
-                <div style={{ marginBottom: '0.5rem' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Probable Root Cause:</span>
-                  <p style={{ color: '#e2e8f0', marginTop: '0.2rem' }}>
-                    {latestIncident?.ai_diagnosis?.probable_root_cause || 'FastAPI service operating within expected parameters.'}
-                  </p>
+              ) : (
+                <div className="ai-empty-state">
+                  <strong>No incident to analyze</strong>
+                  When monitoring detects an error, its likely cause and recommended next steps will appear here.
                 </div>
-                <div style={{ marginBottom: '0.5rem' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Suggested Solution:</span>
-                  <p style={{ color: '#38bdf8', marginTop: '0.2rem' }}>
-                    {latestIncident?.ai_diagnosis?.suggested_solution || 'No manual remediation required.'}
-                  </p>
-                </div>
-                <div>
-                  <span style={{ color: 'var(--text-muted)' }}>Operational Recommendation:</span>
-                  <p style={{ color: '#34d399', marginTop: '0.2rem' }}>
-                    {latestIncident?.ai_diagnosis?.ai_recommendation || 'Continuous telemetry active.'}
-                  </p>
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Panel 7: Code Path */}

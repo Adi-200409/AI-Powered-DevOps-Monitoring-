@@ -58,12 +58,33 @@ class CodeAnalyzer:
         return file_name, line_num, func_name
 
     def locate_file_in_workspace(self, target_filename: str) -> Optional[str]:
-        """Finds the absolute path of a file within the workspace."""
+        """Finds the absolute path of a file within the workspace.
+
+        Prefer project files over virtual environment and dependency vendored copies
+        that share the same basename (for example, database.py under .venv/site-packages).
+        """
         base_name = os.path.basename(target_filename)
-        for root, _, files in os.walk(self.workspace_root):
-            if base_name in files:
-                return os.path.join(root, base_name)
-        return None
+        candidates = []
+        excluded_dirs = {'.git', '.venv', 'venv', '__pycache__', 'node_modules', '.pytest_cache'}
+
+        for root, dirs, files in os.walk(self.workspace_root):
+            dirs[:] = [d for d in dirs if d not in excluded_dirs and not d.startswith('.')]
+            if base_name not in files:
+                continue
+
+            full_path = os.path.join(root, base_name)
+            normalized = os.path.normpath(full_path)
+            parts = normalized.split(os.sep)
+            if any(part in {'site-packages', '.venv', 'venv'} for part in parts):
+                candidates.append((1, full_path))
+            else:
+                candidates.append((0, full_path))
+
+        if not candidates:
+            return None
+
+        candidates.sort(key=lambda item: item[0])
+        return candidates[0][1]
 
     def get_code_context(self, file_path: str, line_number: int, window: int = 5) -> str:
         """Fetches the source code snippet around the target line number."""

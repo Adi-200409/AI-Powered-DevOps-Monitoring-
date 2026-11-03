@@ -51,7 +51,7 @@ The system connects delivery, runtime, log monitoring, AI root-cause analysis, a
 | **Icons & UI** | **Lucide React** | Sleek SVG iconography for DevOps infrastructure, pipelines, AI diagnostics, and terminal actions. |
 | **Backend API** | **FastAPI** (Python 3.12+) | High-performance async REST API, health probes (`/health`), metrics, and failure simulation endpoints. |
 | **Database** | **PostgreSQL 16** | Relational datastore for microservices (`psycopg2-binary`, `SQLAlchemy`). |
-| **Monitoring Backend** | **Python** (`psutil`) | Log tailing, regex error parsing, secret masking, CPU/RAM metrics collection. |
+| **Monitoring Backend** | **Python** (`psutil`) | Host CPU, memory, disk, network and process telemetry, retained metric history, and resource thresholds. |
 | **AI / LLM** | **Groq API** (Llama 3.3 70B) | Fast inference for automated root cause analysis, code path identification, and remediation. |
 | **Alerts & ChatOps**| **Slack Webhook** | Instant notifications sent directly to `#devops-alerts`. |
 | **Containerization** | **Docker & Compose** | Containerized microservices for App, PostgreSQL, Monitor, and Dashboard. |
@@ -134,24 +134,21 @@ AI-DEVOPS-MONITORING/
 
 ## 4. The Central Observability Dashboard (React 18)
 
-The React web dashboard (`http://localhost:5050` or Vite on `http://localhost:5173`) features a design inspired by modern high-end observability interfaces:
+The React dashboard (`http://localhost:5050` or Vite on `http://localhost:5173`) uses a persistent operations shell with dedicated Overview, monitoring, log, incident, service, and pipeline views.
 
-1. **Floating Navigation Rail**: Slim rounded sidebar with active purple glow rings, hot-pink notification counters (`2`), settings, and instant fault-injection triggers.
-2. **Global Header & Search**: Search bar pill, team workload status pill (`12 of 15 on work`, `2 on break`), and SRE Admin profile widget.
-3. **Telemetry Statistics Wave Chart**: Dual-curve interactive canvas featuring a glowing solid purple wave area chart with cubic bezier curves, alongside a secondary dashed neon yellow baseline curve, day/week/month filters, and interactive date selector pills (`01 Sat` through `13 Thu`, with active white pill highlight).
-4. **Active Microservice Cards**: 3 feature cards with service avatars, call timers, uptime pills, lead attribution, and the signature **purple & yellow status dot-matrix**.
-5. **Right Operational Column**: Real-time incident feeds (`Starting calls`), diagnostic timers with colored badges (`Break`), and the **Sunset Gradient Banner Card** (`+278k Autonomous Incidents Resolved`).
-6. **Diagnostics & SRE Hub**: Clicking any card or rail icon opens a glassmorphism modal with Groq AI root-cause analysis, secret-masked code snippets, Slack dispatch previews, Jenkins 7-stage pipeline timelines, and streaming log terminal controls.
+**Live monitoring** displays current host CPU, memory, disk, network throughput, top host processes, and optional Docker CLI container statistics. It also shows application request rate, 5xx rate and latency, plus a direct PostgreSQL `SELECT 1` connectivity probe. CPU, memory, and disk readings are checked against configurable warning and critical thresholds (`METRICS_CPU_WARNING`, `METRICS_CPU_CRITICAL`, and corresponding `MEMORY`/`DISK` variables; defaults are 70/90% for CPU and 80/90% for memory and disk).
 
-1. **System Health & Probes**: Real-time status (`200 OK` / `OFFLINE`), microservice uptime, and PostgreSQL connection pool telemetry.
-2. **CPU Utilization**: Live host CPU load %, core count, alert thresholds, and rolling 20-point animated SVG sparkline telemetry.
-3. **Memory Allocation**: RAM allocation %, allocated vs. total GB breakdown, and dynamic trend sparklines.
-4. **Log Stream Terminal**: Interactive terminal displaying `application.log` with level filters (`ALL`, `INFO`, `WARN`, `ERROR`, `CRITICAL`), real-time search, auto-scroll lock, line numbering, and copy controls.
-5. **Error Detection Engine**: Detected incident feed with severity badges (`CRITICAL`, `ERROR`), container source, and click-to-inspect incident switching that syncs all diagnostic panels.
-6. **AI Root Cause Analysis** *(Groq LLM / Llama 3.3)*: Detailed incident breakdown with probable root causes, one-click copyable remediation snippets, and long-term reliability recommendations.
-7. **Code Context & Secret Masking**: Identified file and line number, sensitive credential masking badge (`Credentials Redacted`), error line highlighting (`>>>>`), and sanitized traceback toggle.
-8. **Slack Notification Dispatch**: Authentic Slack card preview for `#devops-alerts`, webhook delivery indicator, and raw JSON payload inspector.
-9. **CI/CD Deployment Pipeline**: Visual Jenkins 7-stage pipeline flow with stage status indicators (`SUCCESS` / `FAILED`), stage durations, commit info, and expandable build drawer.
+Resource history is stored in `logs/metrics_history.json`, sampled at most once per minute, and retained for up to seven days. The dashboard identifies unavailable or stale readings rather than generating synthetic data. Container statistics require the Docker CLI and an accessible Docker daemon; they are marked unavailable otherwise. Request metrics are process-local counters and reset when the application restarts.
+
+The **Error Intelligence** view groups repeat failures by a stable message fingerprint, suppresses Slack notifications for the same fingerprint repeated within ten minutes, and correlates matching dependency failures across services within a 15-minute window. It also compares recent CPU, memory, and disk measurements with their historical baseline and reports a measured upward trend and indicative time-to-warning when enough samples exist. Incident analysis uses the last 50 persisted incident records, filtered to the last seven days; it is rule-based and is not a statistical forecasting guarantee. To collect errors from multiple Docker services, set `MONITORED_CONTAINERS` to a comma-separated list of container names. The monitoring process needs Docker CLI and access to the Docker daemon; the Compose stack does not expose the host Docker socket by default.
+
+The view can dispatch one of three allow-listed runbooks (`restart_service`, `rollback_deployment`, or `scale_service`) to an operator-configured HTTP receiver. Actions are **disabled by default** and require an explicit confirmation in the dashboard. Set `REMEDIATION_ENABLED=true` and `REMEDIATION_WEBHOOK_URL` in `.env` to enable dispatch. The receiver is responsible for authenticating, validating, and executing the requested runbook; the dashboard never executes shell commands or automatically changes infrastructure. The dashboard API has no built-in user authentication, so do not enable remediation on an endpoint exposed to untrusted users; place it behind trusted network access and authentication.
+
+The Log Explorer streams new entries over server-sent events and also supports manual refresh, source selection (application file, Docker container, or both), severity/service/date filters, multiline stack-trace expansion, and recent searches stored in the browser. Docker log access requires the Docker CLI and an accessible Docker daemon; the Compose dashboard does not mount the host Docker socket by default because that grants broad control over the host. Configure Docker access explicitly before selecting Docker logs in that deployment.
+
+Other working views include incident selection with AI diagnosis and sanitized code context, notification payload inspection, and expandable Jenkins stage records. The current Jenkins deployment endpoint returns example records; it is not connected to a live Jenkins server.
+
+The dashboard API exposes `/api/metrics`, `/api/metrics/history`, and `/api/system-status` alongside the log, incident, deployment, and fault-simulation endpoints. The application service exposes `/metrics` for request statistics and `/health/dependencies` for a direct database check.
 
 ---
 

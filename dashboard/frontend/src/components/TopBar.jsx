@@ -1,111 +1,42 @@
-import React, { useState } from 'react';
-import {
-  Search,
-  RefreshCw,
-  Zap,
-  Activity,
-  Server,
-  Database,
-  Cpu,
-  ShieldCheck,
-  CheckCircle2
-} from 'lucide-react';
+import React from 'react';
+import { AlertTriangle, CheckCircle2, RefreshCw, Zap } from 'lucide-react';
 
 export default function TopBar({
+  pageTitle,
   isRefreshing,
   onRefresh,
   onSimulate,
   backendConnected = false,
-  activeAlertCount = 1
+  lastUpdated,
+  activeAlertCount = 0,
+  onOpenAlerts
 }) {
-  const [searchVal, setSearchVal] = useState('');
+  const updatedAt = lastUpdated instanceof Date && !Number.isNaN(lastUpdated.getTime())
+    ? lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    : 'Not synced';
 
   return (
-    <header className="topbar-container">
-      {/* Brand: AetherOps */}
-      <div className="topbar-brand">
-        <div className="brand-logo-badge">
-          <Activity size={18} color="#a855f7" />
-        </div>
-        <span className="brand-logo-text">
-          Aether<span className="brand-dot-accent">Ops</span>
+    <header className="ops-topbar">
+      <div className="ops-breadcrumb">
+        <span>Platform</span><span className="ops-breadcrumb-divider">/</span><strong>{pageTitle}</strong>
+      </div>
+      <div className="ops-topbar-actions">
+        <span className={`ops-connection ${backendConnected ? 'is-connected' : 'is-disconnected'}`}>
+          {backendConnected ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />}
+          {backendConnected ? 'API connected' : 'API offline'}
         </span>
-        <span className="topbar-env-pill">Production Cluster</span>
-      </div>
-
-      {/* Middle: Search Pill + Microservice Cluster Status */}
-      <div className="topbar-center">
-        {/* Search Input Pill */}
-        <div className="topbar-search-pill">
-          <Search size={15} className="search-icon-dark" />
-          <input
-            type="text"
-            placeholder="Search microservices, logs, tracebacks, deployments..."
-            value={searchVal}
-            onChange={(e) => setSearchVal(e.target.value)}
-            className="topbar-search-input"
-          />
-        </div>
-
-        {/* Cluster Health Pill */}
-        <div className="topbar-team-status-pill">
-          <div className="mini-icon-stack">
-            <span className="cluster-icon-chip chip-app" title="FastAPI User Service">
-              <Server size={12} color="#10b981" />
-            </span>
-            <span className="cluster-icon-chip chip-db" title="PostgreSQL 16 Cluster">
-              <Database size={12} color="#38bdf8" />
-            </span>
-            <span className="cluster-icon-chip chip-ai" title="Groq Llama 3.3 AI Triage">
-              <Cpu size={12} color="#c084fc" />
-            </span>
-            <span className="mini-av-count">4</span>
-          </div>
-
-          <div className="status-work-text">
-            <strong>4 of 4 Services</strong> <span className="text-dim">Online</span>
-          </div>
-
-          <div className={`status-break-pill ${activeAlertCount > 0 ? 'pill-alert' : ''}`}>
-            <span>{activeAlertCount > 0 ? `${activeAlertCount} Alert Active` : 'All Systems Nominal'}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Right: SRE Profile & Simulation Action */}
-      <div className="topbar-right">
-        {/* Quick Fault Injection Simulation */}
-        <button
-          className="topbar-sim-btn"
-          onClick={() => onSimulate('db_error')}
-          title="Inject Test PostgreSQL Failure"
-        >
-          <Zap size={13} />
-          <span>Simulate Fault</span>
+        <span className="ops-updated-at">Updated {updatedAt}</span>
+        <button type="button" className="ops-topbar-icon" onClick={onOpenAlerts} aria-label={`${activeAlertCount} incident records`} title="Open incident queue">
+          <AlertTriangle size={16} />
+          {activeAlertCount > 0 && <span className="ops-alert-count">{activeAlertCount}</span>}
         </button>
-
-        {/* Sync Button */}
-        <button
-          className="topbar-sync-btn"
-          onClick={onRefresh}
-          disabled={isRefreshing}
-          title="Sync Real-time Telemetry"
-        >
-          <RefreshCw size={13} className={isRefreshing ? 'spin' : ''} />
+        <button type="button" className="ops-button ops-button-secondary" onClick={() => onSimulate('db_error')}>
+          <Zap size={14} /> Test fault
         </button>
-
-        {/* SRE Lead User Identity */}
-        <div className="user-profile-widget">
-          <div className="user-meta">
-            <span className="user-name">DevOps Lead</span>
-            <span className="user-role">SRE / Reliability Engineer</span>
-          </div>
-          <div className="user-avatar-wrap">
-            <div className="user-icon-badge">
-              <ShieldCheck size={18} color="#facc15" />
-            </div>
-          </div>
-        </div>
+        <button type="button" className="ops-button ops-button-primary" onClick={onRefresh} disabled={isRefreshing}>
+          <RefreshCw size={14} className={isRefreshing ? 'ops-spin' : ''} />
+          {isRefreshing ? 'Refreshing' : 'Refresh'}
+        </button>
       </div>
     </header>
   );
