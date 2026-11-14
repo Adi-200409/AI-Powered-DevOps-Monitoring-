@@ -1,11 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  initialMockSystemStatus,
-  initialMockMetrics,
-  initialMockIncidents,
-  initialMockLogs,
-  initialMockDeployments
-} from '../utils/mockData';
 
 const API_BASE = import.meta.env?.VITE_API_URL || '';
 
@@ -25,10 +18,10 @@ async function fetchJson(path) {
 }
 
 export function useDevOpsData() {
-  const [systemStatus, setSystemStatus] = useState(initialMockSystemStatus);
-  const [metrics, setMetrics] = useState(initialMockMetrics);
-  const [logs, setLogs] = useState({ lines: initialMockLogs, count: initialMockLogs.length });
-  const [incidents, setIncidents] = useState(initialMockIncidents);
+  const [systemStatus, setSystemStatus] = useState(null);
+  const [metrics, setMetrics] = useState(null);
+  const [logs, setLogs] = useState({ lines: [], count: 0, source: 'all' });
+  const [incidents, setIncidents] = useState([]);
   const [errorIntelligence, setErrorIntelligence] = useState({
     patterns: [],
     correlations: [],
@@ -36,8 +29,8 @@ export function useDevOpsData() {
     summary: {},
     remediation: { enabled: false, approval_required: true, available_runbooks: [] }
   });
-  const [deployments, setDeployments] = useState(initialMockDeployments);
-  const [selectedIncidentId, setSelectedIncidentId] = useState(initialMockIncidents[0]?.id || null);
+  const [deployments, setDeployments] = useState([]);
+  const [selectedIncidentId, setSelectedIncidentId] = useState(null);
 
   const [backendConnected, setBackendConnected] = useState(false);
   const [endpointStatus, setEndpointStatus] = useState({
@@ -221,79 +214,25 @@ export function useDevOpsData() {
   // Selected incident object
   const activeIncident = incidents.find((i) => i.id === selectedIncidentId) || incidents[0] || null;
 
-  // Simulation handler for demonstration
+  // Simulation trigger: dispatches error to backend for monitoring pipeline to detect
   const triggerSimulation = async (type = 'db_error') => {
-    const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
-    let simulatedIncident = null;
-
-    if (type === 'db_error') {
-      simulatedIncident = {
-        id: `inc-${Date.now()}`,
-        timestamp,
-        level: 'CRITICAL',
-        container: 'user-service',
-        error_message: 'ConnectionError: PostgreSQL pool connection refused on 5432 - Max client connections reached (100/100)',
-        code_context: {
-          potential_code_location: 'application/database.py:32 in get_db_connection',
-          sanitized_trace: 'Traceback (most recent call last):\n  File "application/database.py", line 32, in get_db_connection\n    conn = psycopg2.pool.SimpleConnectionPool(...)\nConnectionError: connection pool exhausted',
-          code_snippet: '30  def get_db_connection():\n31      try:\n32  >>>>    return connection_pool.getconn()\n33      except Exception as exc:\n34          logger.error("Connection pool exhausted: %s", exc)',
-          secrets_masked: true
-        },
-        ai_diagnosis: {
-          detected_error: 'PostgreSQL Pool Connection Exhaustion (100/100)',
-          probable_root_cause: 'Database connection leaks from unclosed cursors in shopping cart endpoint /api/items under concurrent requests.',
-          suggested_solution: '1. Wrap DB calls in "with connection_pool.getconn() as conn:" context manager to guarantee connection return.\n2. Increase max_connections in postgresql.conf from 100 to 250.',
-          ai_recommendation: 'Enable PgBouncer connection pooler in docker-compose.yml to multiplex idle application connections.'
-        },
-        slack_delivered: true
-      };
-
-    } else if (type === 'crash') {
-      simulatedIncident = {
-        id: `inc-${Date.now()}`,
-        timestamp,
-        level: 'CRITICAL',
-        container: 'user-service',
-        error_message: 'RuntimeError: Fatal out-of-memory in transaction calculation pipeline',
-        code_context: {
-          potential_code_location: 'application/app.py:85 in process_transaction',
-          sanitized_trace: 'RuntimeError: Memory buffer exceeded\n  File "application/app.py", line 85',
-          code_snippet: '83  def process_transaction(items):\n84      # Infinite generator buffer accumulation\n85  >>>>buffer = [item for item in stream_all_records()]\n86      return calculate_summary(buffer)',
-          secrets_masked: true
-        },
-        ai_diagnosis: {
-          detected_error: 'Process Out-Of-Memory (OOM) / Buffer Overflow',
-          probable_root_cause: 'stream_all_records() collects unchunked rows directly into RAM without batching.',
-          suggested_solution: 'Batch record processing in chunks of 500 records using itertools.islice() or a streaming generator.',
-          ai_recommendation: 'Configure Docker memory limit to 512MB and attach cgroup alerts in Prometheus.'
-        },
-        slack_delivered: true
-      };
-    }
-
-    if (simulatedIncident) {
-      setIncidents((prev) => [simulatedIncident, ...prev.slice(0, 49)]);
-      setSelectedIncidentId(simulatedIncident.id);
-      setLogs((prev) => ({
-        ...prev,
-        lines: [
-          `${timestamp} [CRITICAL] [monitoring] SIMULATED ALERT: ${simulatedIncident.error_message}`,
-          `${timestamp} [INFO] [monitoring] Groq Llama 3.3 Root Cause Analysis completed in 380ms`,
-          `${timestamp} [INFO] [monitoring] Dispatched notification to Slack (#devops-alerts)`,
-          ...prev.lines
-        ],
-        count: prev.count + 3
-      }));
-    }
-
-    // Also attempt to notify actual backend if running
+    const errorType = type === 'crash' ? 'crash' : 'db';
     try {
-      if (type === 'db_error') {
-        await fetch(`http://localhost:5000/api/simulate-db-error`, { method: 'POST' });
-      } else {
-        await fetch(`http://localhost:5000/api/simulate-crash`, { method: 'POST' });
+      await fetchJson(`/api/simulate-error?error_type=${encodeURIComponent(errorType)}`);
+    } catch {
+      try {
+        const directUrl = errorType === 'crash'
+          ? 'http://localhost:5000/api/simulate-crash'
+          : 'http://localhost:5000/api/simulate-db-error';
+        await fetch(directUrl, { method: 'POST' });
+      } catch (err) {
+        console.error('Failed to trigger simulation:', err);
       }
-    } catch {}
+    }
+    // Refresh to fetch real incident created by the monitoring orchestrator
+    setTimeout(() => {
+      fetchData();
+    }, 1200);
   };
 
   const remediateIncident = useCallback(async (incidentId, runbook) => {

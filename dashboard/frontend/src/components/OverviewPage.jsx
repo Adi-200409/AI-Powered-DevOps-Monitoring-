@@ -97,7 +97,7 @@ export default function OverviewPage({
       ? 'Last known metrics'
       : backendConnected
       ? 'Partial API data'
-      : 'Sample snapshot';
+      : 'Awaiting connection';
 
   return (
     <div className="ops-page ops-overview">
@@ -116,7 +116,7 @@ export default function OverviewPage({
         <article className="ops-kpi-card">
           <div className="ops-kpi-label"><Cpu size={15} /> Host CPU</div>
           <div className="ops-kpi-value">{formatValue(cpu, '%')}</div>
-          <div className="ops-kpi-note">{metrics?.cpu?.cores ?? '—'} logical cores · {endpointStatus?.metrics ? 'host measurement' : 'bundled sample'}</div>
+          <div className="ops-kpi-note">{metrics?.cpu?.cores ?? '—'} logical cores · {endpointStatus?.metrics ? 'host measurement' : 'No measurement'}</div>
         </article>
         <article className="ops-kpi-card">
           <div className="ops-kpi-label"><HardDrive size={15} /> Memory use</div>
@@ -140,7 +140,7 @@ export default function OverviewPage({
           <div className="ops-panel-header">
             <div>
               <h2>Host resource utilization</h2>
-              <p>{endpointStatus?.metrics && hasMetricHistory ? 'Recent samples collected by the host metrics collector' : 'No live history is available; sample values are shown above'}</p>
+              <p>{endpointStatus?.metrics && hasMetricHistory ? 'Recent samples collected by the host metrics collector' : 'No live history is available yet'}</p>
             </div>
             <button className="ops-text-action" onClick={() => onNavigate('monitoring')}>
               Monitoring details <ArrowUpRight size={14} />
@@ -292,7 +292,7 @@ export default function OverviewPage({
       {!endpointStatus?.metrics && (
         <div className="ops-data-notice">
           <CircleHelp size={15} />
-          <span>{hasMetricHistory ? 'Host metrics could not be refreshed; resource values are the last successful readings.' : backendConnected ? 'Host metrics are unavailable; resource values are from the bundled sample snapshot.' : 'Monitoring API is unavailable. The dashboard is showing its bundled sample snapshot; values above are not live.'}</span>
+          <span>{hasMetricHistory ? 'Host metrics could not be refreshed; resource values are the last successful readings.' : backendConnected ? 'Host metrics are unavailable; awaiting telemetry.' : 'Monitoring API is offline. Connect the backend to view live metrics.'}</span>
         </div>
       )}
     </div>

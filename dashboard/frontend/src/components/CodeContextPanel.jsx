@@ -5,9 +5,33 @@ export default function CodeContextPanel({ activeIncident }) {
   const [copied, setCopied] = useState(false);
   const [showTrace, setShowTrace] = useState(false);
 
-  const codeCtx = activeIncident?.code_context || {};
-  const codeSnippet = codeCtx.code_snippet || '# Code context around stack trace location will appear here...';
-  const location = codeCtx.potential_code_location || 'application/database.py';
+  if (!activeIncident) {
+    return (
+      <div className="card">
+        <div className="card-header">
+          <div className="card-title-wrap">
+            <FileCode size={18} className="icon-header" />
+            <span className="card-title">7. Code Context & Secret Masking</span>
+          </div>
+          <div className="header-badges">
+            <span className="badge-security">
+              <Lock size={11} />
+              <span>Credentials Redacted</span>
+            </span>
+          </div>
+        </div>
+        <div className="code-panel-body">
+          <div className="ops-empty-state" style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8' }}>
+            <p>No code context available. Code locations and snippets appear when an incident is detected.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const codeCtx = activeIncident.code_context || {};
+  const codeSnippet = codeCtx.code_snippet || '# No code snippet captured for this incident.';
+  const location = codeCtx.potential_code_location || 'Location not determined';
   const trace = codeCtx.sanitized_trace || '';
 
   const handleCopy = () => {

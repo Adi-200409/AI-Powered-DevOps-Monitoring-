@@ -30,7 +30,6 @@ def test_health_endpoint():
 
 def test_request_middleware_logs_correlated_request(caplog):
     """Request logs should include explorer-friendly service, ID, status, and duration fields."""
-    import asyncio
     import logging
     from types import SimpleNamespace
     import application.app as application_module
@@ -46,7 +45,11 @@ def test_request_middleware_logs_correlated_request(caplog):
         return response
 
     with caplog.at_level(logging.INFO, logger="application"):
-        result = asyncio.run(application_module.collect_request_metrics(request, call_next))
+        coro = application_module.collect_request_metrics(request, call_next)
+        try:
+            coro.send(None)
+        except StopIteration as exc:
+            result = exc.value
 
     assert result is response
     assert response.headers["X-Request-ID"] == "test-request-123"

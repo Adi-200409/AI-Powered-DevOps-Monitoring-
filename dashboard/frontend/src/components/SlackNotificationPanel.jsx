@@ -4,11 +4,32 @@ import { Send, CheckCircle2, MessageSquare, Code } from 'lucide-react';
 export default function SlackNotificationPanel({ activeIncident }) {
   const [showJson, setShowJson] = useState(false);
 
-  const isDelivered = activeIncident?.slack_delivered ?? true;
-  const container = activeIncident?.container || 'user-service';
-  const errorMsg = activeIncident?.error_message || 'Simulated exception logged.';
-  const rootCause = activeIncident?.ai_diagnosis?.probable_root_cause || 'FastAPI service operating within nominal limits.';
-  const solution = activeIncident?.ai_diagnosis?.suggested_solution || 'No manual fix needed.';
+  if (!activeIncident) {
+    return (
+      <div className="card">
+        <div className="card-header">
+          <div className="card-title-wrap">
+            <MessageSquare size={18} className="icon-header icon-slack" />
+            <span className="card-title">8. Slack Notification Dispatch</span>
+          </div>
+          <div className="header-badges">
+            <span className="channel-badge">#devops-alerts</span>
+          </div>
+        </div>
+        <div className="slack-panel-body">
+          <div className="ops-empty-state" style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8' }}>
+            <p>No incident notification has been dispatched yet.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const isDelivered = Boolean(activeIncident.slack_delivered);
+  const container = activeIncident.container || 'user-service';
+  const errorMsg = activeIncident.error_message || 'No error details recorded.';
+  const rootCause = activeIncident.ai_diagnosis?.probable_root_cause || 'Awaiting root cause analysis.';
+  const solution = activeIncident.ai_diagnosis?.suggested_solution || 'No suggested fix recorded.';
 
   const payload = {
     channel: '#devops-alerts',

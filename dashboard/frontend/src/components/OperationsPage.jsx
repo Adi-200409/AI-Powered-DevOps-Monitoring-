@@ -193,7 +193,7 @@ export default function OperationsPage({
         ? 'Last known metrics'
         : backendConnected
           ? 'Partial API data'
-          : 'Sample snapshot';
+          : 'Awaiting connection';
 
   let content;
   if (activeTab === 'monitoring') {
@@ -264,7 +264,7 @@ export default function OperationsPage({
         <section className="ops-panel ops-report-note">
           <div className="ops-panel-header"><div><h2>{activeTab === 'reporting' ? 'Current measured snapshot' : 'Resource telemetry'}</h2><p>{descriptions[activeTab]}</p></div></div>
           <p>Historical rollups and SLO calculations are not exposed by the current API. This view reports the readings currently returned by the metrics collector.</p>
-          {!endpointStatus?.metrics && <div className="ops-data-notice"><AlertTriangle size={15} /><span>{hasMetricHistory ? 'The metrics endpoint is unavailable; displayed resource values are the last successful readings.' : backendConnected ? 'Host metrics are unavailable; displayed resource values are the bundled sample snapshot, not live readings.' : 'The monitoring API is offline; displayed values are the bundled sample snapshot, not live readings.'}</span></div>}
+          {!endpointStatus?.metrics && <div className="ops-data-notice"><AlertTriangle size={15} /><span>{hasMetricHistory ? 'The metrics endpoint is unavailable; displayed resource values are the last successful readings.' : backendConnected ? 'Host metrics are unavailable; awaiting telemetry.' : 'The monitoring API is offline. Connect the backend to view live metrics.'}</span></div>}
         </section>
       </>
     );

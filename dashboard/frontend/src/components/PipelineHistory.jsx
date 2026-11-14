@@ -21,7 +21,12 @@ export default function PipelineHistory({ deployments }) {
       </div>
 
       <div className="pipeline-body">
-        {deployments.map((dep) => {
+        {(!deployments || deployments.length === 0) ? (
+          <div className="ops-empty-state" style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8' }}>
+            <p>No CI/CD pipeline deployments recorded yet.</p>
+          </div>
+        ) : (
+          deployments.map((dep) => {
           const isSuccess = dep.status === 'SUCCESS';
           const isExpanded = expandedBuild === dep.build_number;
 
@@ -111,7 +116,7 @@ export default function PipelineHistory({ deployments }) {
               )}
             </div>
           );
-        })}
+        }))}
       </div>
     </div>
   );

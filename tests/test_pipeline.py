@@ -34,10 +34,13 @@ from monitoring.remediation import RemediationError, dispatch_remediation
 # =====================================================================
 # 1. End-to-End Incident Processing Pipeline
 # =====================================================================
-def test_end_to_end_error_processing(tmp_path):
+def test_end_to_end_error_processing(tmp_path, monkeypatch):
     """Simulates an application failure, verifies code context extraction,
     AI triage, Slack payload generation, and incident persistence.
     """
+    import monitoring.main as monitoring_module
+    monkeypatch.setattr(monitoring_module, "STATE_FILE", str(tmp_path / "incidents.json"))
+
     error_event = [
         '2026-11-01 12:00:00 ERROR Database connection failed',
         'File "database.py", line 25, in get_db_connection',
@@ -439,7 +442,7 @@ def test_dashboard_api_routes():
     # CI/CD Deployments
     res_deployments = get_deployments()
     assert "deployments" in res_deployments
-    assert len(res_deployments["deployments"]) > 0
+    assert isinstance(res_deployments["deployments"], list)
 
     # Error simulation endpoint
     res_sim = simulate_error(error_type="db")

@@ -142,10 +142,12 @@ def get_metrics_history(
     window_seconds: int = Query(default=604_800, ge=60, le=604_800),
 ):
     """Return persisted resource samples for the requested time window."""
-    cutoff = datetime.now(timezone.utc).timestamp() - window_seconds
+    effective_window = getattr(window_seconds, "default", window_seconds) if not isinstance(window_seconds, (int, float)) else window_seconds
+    effective_limit = getattr(limit, "default", limit) if not isinstance(limit, int) else limit
+    cutoff = datetime.now(timezone.utc).timestamp() - effective_window
     history = [
         sample
-        for sample in metrics_collector.get_history(limit)
+        for sample in metrics_collector.get_history(effective_limit)
         if datetime.fromisoformat(sample["sampled_at"]).timestamp() >= cutoff
     ]
     return {
@@ -333,46 +335,25 @@ def remediate_incident(incident_id: str, request: RemediationRequest):
     return {"incident_id": incident_id, "remediation": result}
 
 
+DEPLOYMENTS_FILE = os.getenv("DEPLOYMENTS_STATE_FILE", os.path.join(BASE_DIR, "logs", "deployments.json"))
+
+
+def load_deployments():
+    """Load recorded deployments from local JSON state file."""
+    if os.path.exists(DEPLOYMENTS_FILE):
+        try:
+            with open(DEPLOYMENTS_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return data if isinstance(data, list) else []
+        except Exception:
+            return []
+    return []
+
+
 @app.get("/api/deployments")
 def get_deployments():
     """Panel 9: Jenkins build and deployment status (7-Stage Pipeline)."""
-    deployments = [
-        {
-            "build_number": 43,
-            "branch": "main",
-            "commit": "fix(db): update PostgreSQL connection string and retry handling",
-            "status": "SUCCESS",
-            "timestamp": "2026-10-31 11:15:00",
-            "duration": "1m 32s",
-            "stages": [
-                {"name": "Source Code", "status": "SUCCESS"},
-                {"name": "Build", "status": "SUCCESS"},
-                {"name": "Test", "status": "SUCCESS"},
-                {"name": "Docker Build", "status": "SUCCESS"},
-                {"name": "Push Image", "status": "SUCCESS"},
-                {"name": "Deploy", "status": "SUCCESS"},
-                {"name": "Health Check", "status": "SUCCESS"}
-            ]
-        },
-        {
-            "build_number": 42,
-            "branch": "main",
-            "commit": "feat(user): migrate from MongoDB to PostgreSQL schema",
-            "status": "FAILED",
-            "timestamp": "2026-10-31 10:30:00",
-            "duration": "2m 05s",
-            "stages": [
-                {"name": "Source Code", "status": "SUCCESS"},
-                {"name": "Build", "status": "SUCCESS"},
-                {"name": "Test", "status": "SUCCESS"},
-                {"name": "Docker Build", "status": "SUCCESS"},
-                {"name": "Push Image", "status": "SUCCESS"},
-                {"name": "Deploy", "status": "SUCCESS"},
-                {"name": "Health Check", "status": "FAILED"}
-            ]
-        }
-    ]
-    return {"deployments": deployments}
+    return {"deployments": load_deployments()}
 
 
 @app.post("/api/simulate-error")
@@ -384,7 +365,7 @@ def simulate_error(error_type: str = "db"):
         res = requests.post(target_url, timeout=0.5)
         return {"status": "forwarded", "code": res.status_code, "target": target_url}
     except Exception as exc:
-        return {"status": "app_unreachable_mock_logged", "error": str(exc), "target": target_url}
+        return {"status": "app_unreachable", "error": str(exc), "target": target_url}
 
 
 # Mount and serve the React Single-Page Application (SPA)

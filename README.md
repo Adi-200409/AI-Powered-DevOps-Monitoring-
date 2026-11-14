@@ -95,19 +95,17 @@ AI-DEVOPS-MONITORING/
 │           ├── index.css           # Premium dark-plum AMOLED theme with neon violet accents
 │           ├── hooks/
 │           │   └── useDevOpsData.js # Live polling hook, 20-point rolling telemetry & simulation
-│           ├── utils/
-│           │   └── mockData.js     # Realistic demo telemetry & incident fallback
 │           └── components/
-│               ├── Sidebar.jsx     # Floating slim left navigation rail with glowing badges
-│               ├── TopBar.jsx      # Brand logo, search pill, team status & profile widget
-│               ├── TelemetryChart.jsx # Interactive wave chart with purple area & dashed gold curve
-│               ├── ServiceCards.jsx # Ongoing service cards with signature status dot matrix
-│               ├── RightSidebar.jsx # Starting calls, break timers & sunset gradient card
-│               ├── DiagnosticsModal.jsx # Full-screen SRE diagnostics hub (AI, Slack, Logs, CI/CD)
-│               ├── AiTriagePanel.jsx # Groq LLM root-cause & copyable remediation
-│               ├── CodeContextPanel.jsx # Code snippet & secrets masking
-│               ├── SlackNotificationPanel.jsx # #devops-alerts message card
-│               ├── PipelineHistory.jsx # Jenkins 7-stage CI/CD execution pipeline
+│               ├── Sidebar.jsx     # Navigation sidebar with workspace, observability & delivery links
+│               ├── TopBar.jsx      # Header breadcrumbs, API status pill, fault trigger & refresh
+│               ├── OverviewPage.jsx # Executive overview, telemetry cards, incident table & quick actions
+│               ├── OperationsPage.jsx # Dedicated operations tabs (monitoring, logs, errors, AI triage)
+│               ├── LiveMonitoringPanel.jsx # Real-time CPU/memory meters & container process status
+│               ├── ErrorIntelligencePanel.jsx # Aggregated error signatures, error spikes & status codes
+│               ├── AiTriagePanel.jsx # Groq LLM root-cause analysis & remediation steps
+│               ├── CodeContextPanel.jsx # Code snippet inspection & credentials/secrets masking
+│               ├── SlackNotificationPanel.jsx # #devops-alerts message payload card
+│               ├── PipelineHistory.jsx # Jenkins 7-stage CI/CD execution pipeline tracker
 │               └── LogTerminal.jsx # Filterable & searchable application.log console
 │
 ├── logs/
