@@ -35,10 +35,11 @@ pipeline {
             steps {
                 checkout scm
                 script {
-                    env.IMAGE_TAG = "${env.BUILD_NUMBER}-${sh(
+                    def shortCommit = sh(
                         script: 'git rev-parse --short=12 HEAD',
                         returnStdout: true
-                    ).trim()}"
+                    ).trim()
+                    env.IMAGE_TAG = "${env.BUILD_NUMBER}-${shortCommit}"
                 }
             }
             post {
