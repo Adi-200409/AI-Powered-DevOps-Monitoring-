@@ -73,11 +73,19 @@ pipeline {
             steps {
                 sh '''
                     set -eu
-                    python3 -m venv .ci-venv
-                    . .ci-venv/bin/activate
-                    python -m pip install --upgrade pip
-                    python -m pip install -r requirements.txt
-                    python -m pytest tests/ -v
+                    docker run --rm \
+                        --volume "$PWD:/workspace" \
+                        --workdir /workspace \
+                        python:3.12-slim \
+                        sh -eu -c '
+                            python -m pip install --upgrade pip
+                            python -m pip install \
+                                --disable-pip-version-check \
+                                --retries 5 \
+                                --timeout 60 \
+                                -r requirements.txt
+                            python -m pytest tests/ -v
+                        '
                 '''
             }
             post {
